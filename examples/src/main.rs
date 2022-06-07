@@ -9,7 +9,7 @@ use std::time::Instant;
 use structopt::StructOpt;
 use winterfell::StarkProof;
 
-use examples::{fibonacci, rescue, vdf, ExampleOptions, ExampleType};
+use examples::{fibonacci, rescue, vdf, sum,ExampleOptions, ExampleType};
 #[cfg(feature = "std")]
 use examples::{lamport, merkle, rescue_raps};
 
@@ -30,6 +30,9 @@ fn main() {
 
     // instantiate and prepare the example
     let example = match options.example {
+        ExampleType::Sum { sequence_length } => {
+            sum::get_example(options, sequence_length)
+        }
         ExampleType::Fib { sequence_length } => {
             fibonacci::fib2::get_example(options, sequence_length)
         }

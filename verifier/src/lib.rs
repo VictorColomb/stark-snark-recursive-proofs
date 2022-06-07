@@ -106,6 +106,7 @@ pub fn verify<AIR: Air>(
                 let public_coin = RandomCoin::new(&public_coin_seed);
                 let channel = VerifierChannel::new(&air, proof)?;
                 perform_verification::<AIR, AIR::BaseField, Blake3_256<AIR::BaseField>>(air, channel, public_coin)
+
             }
             HashFunction::Blake3_192 => {
                 let public_coin = RandomCoin::new(&public_coin_seed);
@@ -237,6 +238,7 @@ where
         z,
     );
 
+
     if let Some(ref aux_trace_frame) = ood_aux_trace_frame {
         // when the trace contains auxiliary segments, append auxiliary trace elements at the
         // end of main trace elements for both current and next rows in the frame. this is
@@ -253,6 +255,7 @@ where
         public_coin.reseed(H::hash_elements(ood_main_trace_frame.current()));
         public_coin.reseed(H::hash_elements(ood_main_trace_frame.next()));
     }
+
 
     // read evaluations of composition polynomial columns sent by the prover, and reduce them into
     // a single value by computing sum(z^i * value_i), where value_i is the evaluation of the ith

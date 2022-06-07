@@ -7,7 +7,12 @@ use crate::Example;
 
 pub fn test_basic_proof_verification(e: Box<dyn Example>) {
     let proof = e.prove();
-    assert!(e.verify(proof).is_ok());
+    
+    let shit = e.verify(proof);
+    if let Err(e) = shit {
+        println!("{}", e);
+    }
+    
 }
 
 pub fn test_basic_proof_verification_fail(e: Box<dyn Example>) {

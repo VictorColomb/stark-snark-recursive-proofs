@@ -34,6 +34,7 @@ log = { version = "0.4", default-features = false }
 blake3 = { version = "1.0", default-features = false }
 env_logger = { version = "0.9", default-features = false }
 structopt = { version = "0.3", default-features = false }
+bigint="4.4.3"
 
 [dev-dependencies]
 criterion = "0.3"

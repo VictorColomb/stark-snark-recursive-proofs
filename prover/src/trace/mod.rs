@@ -194,6 +194,7 @@ pub trait Trace: Sized {
             for (i, &evaluation) in main_evaluations.iter().enumerate() {
                 assert!(
                     evaluation == Self::BaseField::ZERO,
+
                     "main transition constraint {} did not evaluate to ZERO at step {}",
                     i,
                     step

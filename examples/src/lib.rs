@@ -16,6 +16,9 @@ pub mod rescue;
 pub mod rescue_raps;
 pub mod utils;
 pub mod vdf;
+pub mod sum;
+pub mod basic;
+
 
 #[cfg(test)]
 mod tests;
@@ -95,6 +98,12 @@ impl ExampleOptions {
 #[derive(StructOpt, Debug)]
 //#[structopt(about = "available examples")]
 pub enum ExampleType {
+    /// Compute the sum of all integers
+    Sum {
+        /// Length of Fibonacci sequence; must be a power of two
+        #[structopt(short = "n", default_value = "1048576")]
+        sequence_length: usize,
+    },
     /// Compute a Fibonacci sequence using trace table with 2 registers
     Fib {
         /// Length of Fibonacci sequence; must be a power of two
