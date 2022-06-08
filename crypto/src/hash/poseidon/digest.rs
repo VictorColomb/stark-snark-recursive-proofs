@@ -5,6 +5,7 @@
 
 use super::{Digest, DIGEST_SIZE};
 use core::slice;
+//FIXME: change f128 to f256
 use math::{fields::f64::BaseElement, StarkField};
 use utils::{ByteReader, ByteWriter, Deserializable, DeserializationError, Serializable};
 

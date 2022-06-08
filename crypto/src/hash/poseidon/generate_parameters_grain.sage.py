@@ -110,7 +110,7 @@ def generate_constants(field, n, t, R_F, R_P, prime_number):
     return round_constants
 
 def print_round_constants(round_constants, n, field):
-    print("pub const ROUND_CONSTANTS: [BaseElement;",len(round_constants),"] =",str([TYPE for entry in round_constants]).replace("'",""),";\n")
+    print("pub const ROUND_CONSTANTS: [BaseElement;",len(round_constants),"] =",str([TYPE(1) for entry in round_constants]).replace("'",""),";\n")
 
 def create_mds_p(n, t):
     M = matrix(F, t, t)
@@ -345,14 +345,12 @@ def print_linear_layer(M, n, t):
         exit()
     hex_length = int(ceil(float(n) / _sage_const_4 )) + _sage_const_2  # +2 for "0x"
 
-    if FIELD == _sage_const_1 :
-        print("pub const P: BaseElement = ",TYPE,";\n")
     matrix_string = ""
     for i in range(_sage_const_0 , t):
         if FIELD == _sage_const_0 :
-            matrix_string += str([TYPE for entry in M[i]]).replace("'","")
+            matrix_string += str([TYPE(i) for entry in M[i]]).replace("'","")
         elif FIELD == _sage_const_1 :
-            matrix_string += str([TYPE for entry in M[i]]).replace("'","")
+            matrix_string += str([TYPE(i) for entry in M[i]]).replace("'","")
         if i < (t-_sage_const_1 ):
             matrix_string += ","
     matrix_string = matrix_string.replace("[","")
@@ -360,8 +358,11 @@ def print_linear_layer(M, n, t):
     print("pub const MDS: [BaseElement; T*T] = [", matrix_string,"];\n")
 
 # Init
-print("use math::fields::f128::{BaseElement};")
-TYPE = str("BaseElement::new(1)")
+print("//FIXME: f64 -> f256")
+print("use math::fields::f64::{BaseElement};")
+
+def TYPE(i):
+    return str("BaseElement::new("+str(i)+")") 
 init_generator(FIELD, SBOX, FIELD_SIZE, NUM_CELLS, R_F_FIXED, R_P_FIXED)
 
 # Round constants
@@ -374,7 +375,6 @@ linear_layer = generate_matrix(FIELD, FIELD_SIZE, NUM_CELLS)
 print_linear_layer(linear_layer, FIELD_SIZE, NUM_CELLS)
 print_round_constants(round_constants, FIELD_SIZE, FIELD)
 
-print("pub const CAPACITY : usize = ",C,";\n")
 print("pub const RATE : usize = ",NUM_CELLS - C,";\n")
 print("pub const ALPHA : u32 = ", 5 ,";\n")
 
