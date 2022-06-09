@@ -404,7 +404,7 @@ fn mul(a: U256, b: U256) -> U256 {
     let (y0, y1, y2) = mul_256x128(a, b.low_u128()); // y = a * b_lo
 
     let (mut y1, carry) = add128_with_carry(y1, x0, 0);
-    let (mut y2, y3) = add128_with_carry(y2, x1, carry); // y = y + (x << 64)
+    let (mut y2, y3) = add128_with_carry(y2, x1, carry); // y = y + (x << 128)
     if y3 == 1 {
         // if overflow, substract modulus
         let (t0, t1) = sub_modulus(y1, y2);
@@ -544,10 +544,11 @@ fn mul_reduce(z0: u128, z1:u128, z2: u128) -> (u128, u128, u128) {
 #[inline]
 fn mul_by_modulus(a: u128) -> (u128, u128, u128) {
     let (a_lo, _) = (U256::from(a)).overflowing_mul(M);
-    let a_hi = if a == 0 { 0 } else { a - 1};
+    let a_hi = if a == 0 { 0 } else { a - 1 };
     (a_lo.low_u128(), (a_lo >> 128).low_u128(), a_hi)
 }
 
+/// Substracts the modulus `M` from the 256-bit input value encoded as a least significant first u128 2-tuple.
 #[inline]
 fn sub_modulus(a_lo: u128, a_hi: u128) -> (u128, u128) {
     let (mut z, _) = U256::zero().overflowing_sub(M);
@@ -559,16 +560,16 @@ fn sub_modulus(a_lo: u128, a_hi: u128) -> (u128, u128) {
 #[inline]
 fn sub_384x384(a0: u128, a1: u128, a2: u128, b0: u128, b1: u128, b2: u128) -> (u128, u128, u128) {
     let (z0, _) = U256::from(a0).overflowing_sub(U256::from(b0));
-    let (z1, _) = U256::from(a1).overflowing_sub(U256::from(b1) + z0 >> 255);
-    let (z2, _) = U256::from(a2).overflowing_sub(U256::from(b2) + z1 >> 255);
+    let (z1, _) = U256::from(a1).overflowing_sub(U256::from(b1).overflowing_add(z0 >> 255).0);
+    let (z2, _) = U256::from(a2).overflowing_sub(U256::from(b2).overflowing_add(z1 >> 255).0);
     (z0.low_u128(), z1.low_u128(), z2.low_u128())
 }
 
 #[inline]
 fn add_384x384(a0: u128, a1: u128, a2: u128, b0: u128, b1: u128, b2: u128) -> (u128, u128, u128) {
     let z0 = U256::from(a0) + U256::from(b0);
-    let z1 = U256::from(a1) + U256::from(b1) + z0 >> 255;
-    let z2 = U256::from(a2) + U256::from(b2) + z1 >> 255;
+    let z1 = U256::from(a1) + U256::from(b1) + (z0 >> 255);
+    let z2 = U256::from(a2) + U256::from(b2) + (z1 >> 255);
     (z0.low_u128(), z1.low_u128(), z2.low_u128())
 }
 
