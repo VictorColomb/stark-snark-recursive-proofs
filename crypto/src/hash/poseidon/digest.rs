@@ -5,7 +5,7 @@
 
 use super::{Digest, DIGEST_SIZE};
 use core::slice;
-//FIXME: change f128 to f256
+//FIXME: change f64 to f256
 use math::{fields::f64::BaseElement, StarkField};
 use utils::{ByteReader, ByteWriter, Deserializable, DeserializationError, Serializable};
 
@@ -64,7 +64,9 @@ impl Deserializable for ElementDigest {
         let e3 = BaseElement::new(source.read_u64()?);
         let e4 = BaseElement::new(source.read_u64()?);
 
-        Ok(Self([e1, e2, e3, e4]))
+
+
+        Ok(Self(BaseElement([e1, e2, e3, e4])))
     }
 }
 

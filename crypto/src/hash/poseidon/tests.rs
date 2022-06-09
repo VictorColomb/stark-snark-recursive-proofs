@@ -62,7 +62,23 @@ fn test_constants() {
 
 }
 #[test]
-fn apply_permutation() {
+fn test_permutation() {
+    let mut state = [
+        BaseElement::new(0),
+        BaseElement::new(1),
+        BaseElement::new(2),
+        
+        ].to_vec();
+        
+        poseidon::permutation(&mut state);
+        
+        // expected values are obtained by executing sage reference implementation code
+        
+        println!("Permuted state = {:?}",state)
+    }
+    
+#[test]
+fn test_hash() {
     let mut state = [
         BaseElement::new(0),
         BaseElement::new(1),
@@ -70,9 +86,25 @@ fn apply_permutation() {
 
     ].to_vec();
 
-    poseidon::permutation(&mut state);
+    poseidon::hash(&mut state);
 
     // expected values are obtained by executing sage reference implementation code
 
-    println!("Permuted state = {:?}",state)
+    println!("Hash state = {:?}",state)
+}
+
+#[test]
+fn test_element_digest() {
+    let mut state = [
+        BaseElement::new(0),
+        BaseElement::new(1),
+        BaseElement::new(2),
+
+    ].to_vec();
+
+    let result = poseidon::elements_digest(&mut state);
+
+    // expected values are obtained by executing sage reference implementation code
+
+    println!("Hash state = {:?}",result)
 }

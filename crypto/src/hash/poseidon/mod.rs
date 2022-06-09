@@ -17,7 +17,7 @@ pub use digest::ElementDigest;
 // ===============================================================================================
 /// Implementation of the [Hasher](super::Hasher) trait for POSEIDON hash function with 256-bit
 /// output.
-const DIGEST_SIZE : usize = 4;
+const DIGEST_SIZE : usize = 1;
 
 
 

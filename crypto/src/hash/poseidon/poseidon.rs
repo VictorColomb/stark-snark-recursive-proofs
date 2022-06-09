@@ -34,68 +34,73 @@ pub fn digest(input: &[u8]) -> ElementDigest{
     ElementDigest::new(vec_to_array(output))
 
 
-
-
-
 }
 
 pub fn elements_digest(input: &[BaseElement]) -> ElementDigest{
 
-    let mut output = input.clone().to_vec();
-    padder(&mut output);
-    hash(&mut output);
-    ElementDigest::new(vec_to_array(output))
+    let mut temp = input.clone().to_vec();
+    padder(&mut temp); 
+
+    ElementDigest::new(hash(&mut temp))
+    
 
 }
 
-pub fn padder(state: &mut Vec<BaseElement>){
+pub fn padder(input: &mut Vec<BaseElement>){
 
-    let l = state.len();
+    let l = input.len();
     assert_eq!(l,T);
     let padded_length = (l/RATE +1) * RATE;
 
     if l != padded_length {
 
-        state.push(BaseElement::new(1));
+        input.push(BaseElement::new(1));
 
         for _i in l+1..padded_length {
-            state.push(BaseElement::new(0))
+            input.push(BaseElement::new(0))
         }
         
     }
 
 }
 
-pub fn hash(state: &mut Vec<BaseElement>) {
+
+pub fn hash(input: &mut Vec<BaseElement>) -> [BaseElement;RATE] {
+
+    let ref mut state = [BaseElement::new(0);T].to_vec(); 
     
-    for i in 0..state.len()/RATE {
+    for i in 0..input.len()/RATE {
 
         //absorbtion
         for j in 0..RATE {
-            state[j] = state[j] + state[i*RATE+j]
+            state[j] = state[j] + input[i*RATE+j]
         }
 
         permutation(state);
 
     }
 
+    state[..RATE].try_into().unwrap()
+
 }
 
 pub fn permutation(state: &mut Vec<BaseElement>) {
 
-    println!("{}-{}-{}",R_F,R_P,state.len());
+    let ref mut temp = state.clone()[..T].to_vec();
 
     for j in 0..R_F/2 {
-        full_permutation(state,j);
+        full_permutation(temp,j);
     }
 
     for j in 0..R_P {
-        partial_permutation(state,j+R_F/2);
+        partial_permutation(temp,j+R_F/2);
     }
 
     for j in 0..R_F/2 {
-        full_permutation(state,j + R_F/2 + R_P);
+        full_permutation(temp,j + R_F/2 + R_P);
     }
+
+    state[..T].copy_from_slice(&temp);
     
 }
 
