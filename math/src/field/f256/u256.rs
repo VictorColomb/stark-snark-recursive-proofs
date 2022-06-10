@@ -5,12 +5,19 @@ construct_uint! {
     pub struct U256(4);
 }
 
+impl U256 {
+    #[inline(always)]
+    pub fn is_even(&self) -> bool {
+        *self & U256::one() != U256::one()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::U256;
 
     #[test]
-    fn add() {
+    fn test_add() {
         // a = 2^256 - 1
         let a = U256::max_value();
         // check overflowing add
@@ -18,7 +25,7 @@ mod tests {
     }
 
     #[test]
-    fn low() {
+    fn test_low() {
         let a = [1, 1, 1, 1];
         let e = U256(a);
 

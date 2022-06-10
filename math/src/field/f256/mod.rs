@@ -2,7 +2,7 @@
 //! the sub-group of curve BLS12-381 - namely 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001.
 //!
 //! Operations in this field are implemented using Barret reduction and are stored in their
-//! canonical form using [U256](primitive_types::U256) as the backing type. However, this field was not chosen with any
+//! canonical form using [U256] as the backing type. However, this field was not chosen with any
 //! significant thought given to performance, and the implementations of most operations are
 //! sub-optimal as well.
 
@@ -13,10 +13,13 @@ use core::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     slice,
 };
-use utils::{DeserializationError, Randomizable, AsBytes, Serializable, Deserializable};
+use utils::{AsBytes, Deserializable, DeserializationError, Randomizable, Serializable};
 
 mod u256;
 pub use u256::U256;
+
+mod u512;
+pub use u512::U512;
 
 #[cfg(test)]
 mod tests;
@@ -48,15 +51,19 @@ const ELEMENT_BYTES: usize = core::mem::size_of::<U256>();
 
 /// Represents a base field element.
 ///
-/// Internal values are stored in their canonical form in the range [0, M). The backing type is [U256](primitive_types::U256).
+/// Internal values are stored in their canonical form in the range [0, M). The backing type is [U256].
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Default)]
 pub struct BaseElement(U256);
 
 impl BaseElement {
     /// Creates a new field element from a U256 value. If the value is greater or equal to
     /// the field modulus, modular reduction is silently performed.
-    pub fn new(value: U256) -> Self {
-        BaseElement(if value < M { value } else { value - M })
+    pub fn new<T>(value: T) -> Self
+    where
+        T: Into<U256>,
+    {
+        let v: U256 = value.into();
+        BaseElement(if v < M { v } else { v - M })
     }
 }
 
@@ -72,7 +79,7 @@ impl FieldElement for BaseElement {
     const IS_CANONICAL: bool = true;
 
     fn inv(self) -> Self {
-        todo!()
+        BaseElement::from(inv(self.0))
     }
 
     fn conjugate(&self) -> Self {
@@ -152,7 +159,7 @@ impl Add for BaseElement {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Self(add(self.0, rhs.0))
+        Self::new(add(self.0, rhs.0))
     }
 }
 
@@ -166,7 +173,7 @@ impl Sub for BaseElement {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Self(sub(self.0, rhs.0))
+        Self::new(sub(self.0, rhs.0))
     }
 }
 
@@ -180,7 +187,7 @@ impl Mul for BaseElement {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
-        Self(mul(self.0, rhs.0))
+        Self::new(mul(self.0, rhs.0))
     }
 }
 
@@ -194,7 +201,7 @@ impl Div for BaseElement {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
-        Self(mul(self.0, inv(rhs.0)))
+        Self::new(mul(self.0, inv(rhs.0)))
     }
 }
 
@@ -208,7 +215,7 @@ impl Neg for BaseElement {
     type Output = Self;
 
     fn neg(self) -> Self {
-        Self(sub(U256::zero(), self.0))
+        Self::new(sub(U256::zero(), self.0))
     }
 }
 
@@ -356,7 +363,7 @@ impl AsBytes for BaseElement {
 
 impl Serializable for BaseElement {
     fn write_into<W: utils::ByteWriter>(&self, target: &mut W) {
-        let mut bytes= Vec::with_capacity(ELEMENT_BYTES);
+        let mut bytes = Vec::with_capacity(ELEMENT_BYTES);
         self.0.to_little_endian(&mut bytes);
         target.write_u8_slice(&bytes);
     }
@@ -411,189 +418,47 @@ fn sub(a: U256, b: U256) -> U256 {
 
 /// Computes (a * b) % m. a and b are assumed to be valid field elements.
 fn mul(a: U256, b: U256) -> U256 {
-    let (x0, x1, x2) = mul_256x128(a, (b >> 128).low_u128()); // x = a * b_hi
-    let (mut x0, mut x1, x2) = mul_reduce(x0, x1, x2); // x = x - (x >> 256) * m
-    if x2 == 1 {
-        // if overflow, substract modulus
-        let (t0, t1) = sub_modulus(x0, x1); // x = x - m
-        x0 = t0;
-        x1 = t1;
-    }
-
-    let (y0, y1, y2) = mul_256x128(a, b.low_u128()); // y = a * b_lo
-
-    let (mut y1, carry) = add128_with_carry(y1, x0, 0);
-    let (mut y2, y3) = add128_with_carry(y2, x1, carry); // y = y + (x << 128)
-    if y3 == 1 {
-        // if overflow, substract modulus
-        let (t0, t1) = sub_modulus(y1, y2);
-        y1 = t0;
-        y2 = t1;
-    }
-
-    let (mut z0, mut z1, z2) = mul_reduce(y0, y1, y2); // z = y - (y >> 256) * m
-
-    // make sure z is smaller than m
-    if z2 == 1 || (z1 == (M >> 128).low_u128() && z0 >= M.low_u128()) {
-        let (t0, t1) = sub_modulus(z0, z1);
-        z0 = t0;
-        z1 = t1;
-    }
-
-    (U256::from(z1) << 128) + U256::from(z0)
+    let t = U512::from(a) * U512::from(b);
+    (t % U512::from(M)).low_u256()
 }
 
 /// Computes y such that (x * y) % m = 1 except for when x = 0. In that case,
 /// 0 is returned. x is assumed to be a valid field element.
 fn inv(x: U256) -> U256 {
-    if x == U256::zero() {
-        return U256::zero();
-    }
-
-    let mut v = M;
-    let (mut a0, mut a1, mut a2) = (0, 0, 0);
-    let (mut u0, mut u1, mut u2) = if x & U256::one() == U256::one() {
-        // u = x
-        (x.low_u128(), (x >> 128).low_u128(), 0)
-    } else {
-        // u = x + m
-        add_384x384(x.low_u128(), (x >> 128).low_u128(), 0, M.low_u128(), (M >> 128).low_u128(), 0)
-    };
-    // d = m - 1
-    let (mut d0, mut d1, mut d2) = (M.low_u128() - 1, (M >> 128).low_u128(), 0);
-
-    // compute the inverse
-    while v != U256::one() {
-        while u2 > 0 || (U256::from(u0) + (U256::from(u1) << 128)) > v {
-            // u > v
-            // u = u - v
-            let (t0, t1, t2) = sub_384x384(u0, u1, u2, v.low_u128(), (v >> 128).low_u128(), 0);
-            u0 = t0;
-            u1 = t1;
-            u2 = t2;
-
-            // d = d + 1
-            let (t0, t1, t2) = add_384x384(d0, d1, d2, a0, a1, a2);
-            d0 = t0;
-            d1 = t1;
-            d2 = t2;
-
-            while u0 & 1 == 0 {
-                if d0 & 1 == 1 {
-                    // d = d + m
-                    let (t0, t1, t2) = add_384x384(d0, d1, d2, M.low_u128(), (M >> 128).low_u128(), 0);
-                    d0 = t0;
-                    d1 = t1;
-                    d2 = t2;
-                }
-
-                // u = u >> 1
-                u0 = (u0 >> 1) | ((u1 & 1) << 127);
-                u1 = (u1 >> 1) | ((u2 & 1) << 127);
-                u2 >>= 1;
-
-                // d = d >> 1
-                d0 = (d0 >> 1) | ((d1 & 1) << 127);
-                d1 = (d1 >> 1) | ((d2 & 1) << 127);
-                d2 >>= 1;
-            }
-        }
-
-        // v = v - u
-        v -= U256::from(u0) + (U256::from(u1) << 128);
-
-        // a = a + d
-        let (t0, t1, t2) = add_384x384(a0, a1, a2, d0, d1, d2);
-        a0 = t0;
-        a1 = t1;
-        a2 = t2;
-
-        while v & U256::one() == U256::zero() {
-            if a0 & 1 == 1 {
-                // a = a + m
-                let (t0, t1, t2) = add_384x384(a0, a1, a2, M.low_u128(), (M >> 128).low_u128(), 0);
-                a0 = t0;
-                a1 = t1;
-                a2 = t2;
-            }
-
-            v >>= 1;
-
-            // a = a >> 1
-            a0 = (a0 >> 1) | ((a1 & 1) << 63);
-            a1 = (a1 >> 1) | ((a2 & 1) << 63);
-            a2 >>= 1;
-        }
-    }
-
-    let mut a = U256::from(a0) + (U256::from(a1) << 128);
-    while a2 > 0 || a >= M {
-        let (t0, t1, t2) = sub_384x384(a0, a1, a2, M.low_u128(), (M >> 128).low_u128(), 0);
-        a0 = t0;
-        a1 = t1;
-        a2 = t2;
-        a = U256::from(a0) + (U256::from(a1) << 128);
-    }
-
-    a
+    xgcd(x, M).0 % M
 }
 
 // HELPER FUNCTIONS
-// ================================================================================================
 
-/// Multiplies a 256-bit number with a 128-bit. Returns the result as a least significant first u128 3-tuple.
-#[inline]
-fn mul_256x128(a: U256, b: u128) -> (u128, u128, u128) {
-    let z_lo = (U256::from(a.low_u128())) * U256::from(b);
-    let z_hi = (a >> 128) * (U256::from(b));
-    let z_hi = z_hi + (z_lo >> 128);
-    (z_lo.low_u128(), z_hi.low_u128(), (z_hi >> 128).low_u128())
-}
+/// Extended Euclidean Algorithm for unsigned integers. Returns the Bézout coefficients.
+pub fn xgcd(a: U256, b: U256) -> (U256, U256) {
+    let mut r0 = a.clone();
+    let mut r1 = b.clone();
+    let mut s0 = U256::one();
+    let mut s1 = U256::zero();
+    let mut t0 = U256::zero();
+    let mut t1 = U256::one();
+    let mut n = 0;
 
-#[inline]
-fn mul_reduce(z0: u128, z1:u128, z2: u128) -> (u128, u128, u128) {
-    let (q0, q1, q2) = mul_by_modulus(z2);
-    let (z0, z1, z2) = sub_384x384(z0, z1, z2, q0, q1, q2);
-    (z0, z1, z2)
-}
+    while r1 != U256::zero() {
+        let q = r0 / r1;
+        r0 = if r0 > q * r1 {r0 - q*r1} else {q*r1 - r0};
+        mem::swap(&mut r0, &mut r1);
 
-/// Multiples a 128-bit number with the field modulus `M`.
-///
-/// Returns the result as a least significant first u128 3-tuple.
-#[inline]
-fn mul_by_modulus(a: u128) -> (u128, u128, u128) {
-    let (a_lo, _) = (U256::from(a)).overflowing_mul(M);
-    let a_hi = if a == 0 { 0 } else { a - 1 };
-    (a_lo.low_u128(), (a_lo >> 128).low_u128(), a_hi)
-}
+        s0 = s0 + q*s1;
+        mem::swap(&mut s0, &mut s1);
 
-/// Substracts the modulus `M` from the 256-bit input value encoded as a least significant first u128 2-tuple.
-#[inline]
-fn sub_modulus(a_lo: u128, a_hi: u128) -> (u128, u128) {
-    let (mut z, _) = U256::zero().overflowing_sub(M);
-    (z, _) = z.overflowing_add(U256::from(a_lo));
-    (z, _) = z.overflowing_add(U256::from(a_hi) << 128);
-    (z.low_u128(), (z >> 128).low_u128())
-}
+        t0 = t0 + q*t1;
+        mem::swap(&mut t0, &mut t1);
 
-#[inline]
-fn sub_384x384(a0: u128, a1: u128, a2: u128, b0: u128, b1: u128, b2: u128) -> (u128, u128, u128) {
-    let (z0, _) = U256::from(a0).overflowing_sub(U256::from(b0));
-    let (z1, _) = U256::from(a1).overflowing_sub(U256::from(b1).overflowing_add(z0 >> 255).0);
-    let (z2, _) = U256::from(a2).overflowing_sub(U256::from(b2).overflowing_add(z1 >> 255).0);
-    (z0.low_u128(), z1.low_u128(), z2.low_u128())
-}
+        n += 1;
+    }
 
-#[inline]
-fn add_384x384(a0: u128, a1: u128, a2: u128, b0: u128, b1: u128, b2: u128) -> (u128, u128, u128) {
-    let z0 = U256::from(a0) + U256::from(b0);
-    let z1 = U256::from(a1) + U256::from(b1) + (z0 >> 255);
-    let z2 = U256::from(a2) + U256::from(b2) + (z1 >> 255);
-    (z0.low_u128(), z1.low_u128(), z2.low_u128())
-}
+    if n % 2 != 0 {
+        s0 = b - s0;
+    } else {
+        t0 = a - t0;
+    }
 
-#[inline]
-fn add128_with_carry(a: u128, b: u128, carry: u128) -> (u128, u128) {
-    let ret = U256::from(a) + U256::from(b) + U256::from(carry);
-    (ret.low_u128(), (ret >> 128).low_u128())
+    (s0, t0)
 }

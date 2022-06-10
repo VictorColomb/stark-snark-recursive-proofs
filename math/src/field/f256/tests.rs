@@ -1,10 +1,10 @@
 // BASIC ALGEBRA
 // ================================================================================================
 
-use rand_utils::rand_value;
 use num_bigint::BigUint;
+use rand_utils::{rand_value, rand_vector};
 
-use super::{BaseElement, FieldElement, StarkField, AsBytes, M};
+use super::{AsBytes, BaseElement, FieldElement, StarkField, M};
 
 #[test]
 fn add() {
@@ -77,6 +77,20 @@ fn mul() {
         BaseElement::ONE,
         BaseElement::from(t) * BaseElement::from(2u8)
     );
+}
+
+#[test]
+fn inv() {
+    // identity
+    assert_eq!(BaseElement::ONE, BaseElement::inv(BaseElement::ONE));
+    assert_eq!(BaseElement::ZERO, BaseElement::inv(BaseElement::ZERO));
+
+    // test random values
+    let x: Vec<BaseElement> = rand_vector(1000);
+    for i in 0..x.len() {
+        let y = BaseElement::inv(x[i]);
+        assert_eq!(BaseElement::ONE, x[i] * y);
+    }
 }
 
 // HELPER FUNCTIONS
