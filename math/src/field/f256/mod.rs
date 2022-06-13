@@ -374,6 +374,10 @@ impl BaseElement{
         self.0.to_little_endian(&mut bytes);
         bytes
     }
+
+    pub fn from_le_bytes(bytes: &[u8]) -> Self {
+        Self(U256::from_little_endian(bytes))
+    }
 }
 
 // FINITE FIELD ARITHMETIC
