@@ -3,7 +3,7 @@ use super::param::*;
 use super::digest::ElementDigest;
 use std::vec::Vec;
 //FIXME: f64 to f256
-use math::{fields::f64::BaseElement,FieldElement};
+use math::{fields::f256::BaseElement,FieldElement};
 
 pub fn digest(input: &[u8]) -> ElementDigest{
 
@@ -20,9 +20,7 @@ pub fn digest(input: &[u8]) -> ElementDigest{
         // convert the bytes into a field element and absorb it into the rate portion of the
         // state; if the rate is filled up, apply the Rescue permutation and start absorbing
         // again from zero index.
-        let mut buf = [0_u8; 8];
-        buf.copy_from_slice(chunk);
-        formatted_input[i] = BaseElement::new(u64::from_le_bytes(buf));
+        formatted_input[i] = BaseElement::from_le_bytes(chunk);
 
     }
 
@@ -54,10 +52,10 @@ pub fn padder(input: &mut Vec<BaseElement>){
 
     if l != padded_length {
 
-        input.push(BaseElement::new(1));
+        input.push(BaseElement::ONE);
 
         for _i in l+1..padded_length {
-            input.push(BaseElement::new(0))
+            input.push(BaseElement::ZERO)
         }
         
     }
@@ -67,7 +65,7 @@ pub fn padder(input: &mut Vec<BaseElement>){
 
 pub fn hash(input: &mut Vec<BaseElement>) -> [BaseElement;RATE] {
 
-    let ref mut state = [BaseElement::new(0);T].to_vec(); 
+    let ref mut state = [BaseElement::ZERO;T].to_vec(); 
     
     for i in 0..input.len()/RATE {
 
@@ -141,7 +139,7 @@ pub fn apply_mds<E: FieldElement + From<BaseElement>>(state: &mut [E]) {
     let mut temp = [E::ZERO; T];
     for i in 0..T {
         for j in 0..T {
-            temp[j] = E::from(MDS[i * T + j]) * state[j];
+            temp[j] = E::from(MDS[i][j]) * state[j];
         }
             
         for j in 0..T {

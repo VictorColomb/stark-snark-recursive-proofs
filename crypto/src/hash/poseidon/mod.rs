@@ -8,7 +8,7 @@ mod tests;
 
 use super::{Digest,ElementHasher, Hasher};
 //FIXME: f64 -> f256
-use math::{fields::f64::BaseElement, FieldElement, StarkField};
+use math::{fields::f256::{BaseElement, U256}, FieldElement, StarkField};
 
 mod digest;
 pub use digest::ElementDigest;
@@ -40,9 +40,9 @@ impl Hasher for Poseidon {
         //FIXME: T+2??
         let mut state = [BaseElement::ZERO; T+2];
         state[0..T].copy_from_slice(seed.as_elements());
-        state[T] = BaseElement::new(value);
-        if value > BaseElement::MODULUS {
-            state[T + 1] = BaseElement::new(value / BaseElement::MODULUS);
+        state[T] = BaseElement::from(value);
+        if U256::from(value) > BaseElement::MODULUS {
+            state[T + 1] = BaseElement::new(U256::from(value) / BaseElement::MODULUS);
         }
         poseidon::elements_digest(&state)
     }

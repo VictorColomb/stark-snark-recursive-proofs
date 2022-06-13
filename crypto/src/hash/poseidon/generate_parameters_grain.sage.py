@@ -49,6 +49,20 @@ if FIELD == _sage_const_1 :
 elif FIELD == _sage_const_0 :
     F = GF(_sage_const_2 **FIELD_SIZE, name='x', modulus = PRIME_NUMBER, names=('x',)); (x,) = F._first_ngens(1)
 
+def to_u256(b):
+    string = "BaseElement(U256("
+    t = []
+    a = int(b)
+    while a != 0:
+        t.append(a%(2**64))
+        a//=2**64
+    while len(t) != 4:
+        t.append(0)
+    string += str(t)
+    string += "))"
+    return string
+
+
 def grain_sr_generator():
     bit_sequence = INIT_SEQUENCE
     for _ in range(_sage_const_0 , _sage_const_160 ):
@@ -110,7 +124,7 @@ def generate_constants(field, n, t, R_F, R_P, prime_number):
     return round_constants
 
 def print_round_constants(round_constants, n, field):
-    print("pub const ROUND_CONSTANTS: [BaseElement;",len(round_constants),"] =",str([TYPE(1) for entry in round_constants]).replace("'",""),";\n")
+    print("pub const ROUND_CONSTANTS: [BaseElement;",len(round_constants),"] =",str([to_u256(entry) for entry in round_constants]).replace("'",""),";\n")
 
 def create_mds_p(n, t):
     M = matrix(F, t, t)
@@ -345,21 +359,20 @@ def print_linear_layer(M, n, t):
         exit()
     hex_length = int(ceil(float(n) / _sage_const_4 )) + _sage_const_2  # +2 for "0x"
 
-    matrix_string = ""
+    matrix_string = "["
     for i in range(_sage_const_0 , t):
         if FIELD == _sage_const_0 :
-            matrix_string += str([TYPE(i) for entry in M[i]]).replace("'","")
+            matrix_string += str([to_u256(entry) for entry in M[i]]).replace("'","")
         elif FIELD == _sage_const_1 :
-            matrix_string += str([TYPE(i) for entry in M[i]]).replace("'","")
+            matrix_string += str([to_u256(entry) for entry in M[i]]).replace("'","")
         if i < (t-_sage_const_1 ):
             matrix_string += ","
-    matrix_string = matrix_string.replace("[","")
-    matrix_string = matrix_string.replace("]","")
-    print("pub const MDS: [BaseElement; T*T] = [", matrix_string,"];\n")
+    matrix_string = matrix_string
+    matrix_string = matrix_string
+    print("pub const MDS: [[BaseElement; T];T]  = ", matrix_string,"];\n")
 
 # Init
-print("//FIXME: f64 -> f256")
-print("use math::fields::f64::{BaseElement};")
+print("use math::fields::f256::{BaseElement,U256};")
 
 def TYPE(i):
     return str("BaseElement::new("+str(i)+")") 
@@ -377,6 +390,7 @@ print_round_constants(round_constants, FIELD_SIZE, FIELD)
 
 print("pub const RATE : usize = ",NUM_CELLS - C,";\n")
 print("pub const ALPHA : u32 = ", 5 ,";\n")
+
 
 
 

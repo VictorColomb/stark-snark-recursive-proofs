@@ -5,8 +5,7 @@
 
 use super::{Digest, DIGEST_SIZE};
 use core::slice;
-//FIXME: change f64 to f256
-use math::{fields::f256::BaseElement, StarkField};
+use math::{fields::f256::BaseElement};
 use utils::{ByteReader, ByteWriter, Deserializable, DeserializationError, Serializable};
 
 // DIGEST TRAIT IMPLEMENTATIONS
@@ -33,15 +32,9 @@ impl ElementDigest {
 
 impl Digest for ElementDigest {
     fn as_bytes(&self) -> [u8; 32] {
-        let mut result = [0; 32];
 
-        self.0[0].get_modulus_le_bytes(result[..8]);
-        result[..8].copy_from_slice(&self.0[0].as_int().to_little_endian());
-        result[8..16].copy_from_slice(&self.0[1].as_int().to_le_bytes());
-        result[16..24].copy_from_slice(&self.0[2].as_int().to_le_bytes());
-        result[24..].copy_from_slice(&self.0[3].as_int().to_le_bytes());
+        self.0[0].to_le_bytes()
 
-        result
     }
 }
 
@@ -60,14 +53,10 @@ impl Serializable for ElementDigest {
 impl Deserializable for ElementDigest {
     fn read_from<R: ByteReader>(source: &mut R) -> Result<Self, DeserializationError> {
         // TODO: check if the field elements are valid?
-        let e1 = BaseElement::new(source.read_u64()?);
-        let e2 = BaseElement::new(source.read_u64()?);
-        let e3 = BaseElement::new(source.read_u64()?);
-        let e4 = BaseElement::new(source.read_u64()?);
+        let e1 = BaseElement::read_from(source)?;
 
 
-
-        Ok(Self([e1, e2, e3, e4]))
+        Ok(Self([e1]))
     }
 }
 

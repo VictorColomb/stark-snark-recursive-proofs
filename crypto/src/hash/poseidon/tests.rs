@@ -9,7 +9,7 @@ use rand_utils::{rand_array};
 
 #[test]
 pub fn test() {
-    //let mut input = [BaseElement::new(0);T];
+    //let mut input = [BaseElement::from(0u8);T];
 
     //println!("{:?}",Poseidon::hash_elements(input))
     assert_eq!(1,1)
@@ -32,9 +32,9 @@ fn test_sbox() {
 #[test]
 fn test_mds() {
     let mut state = [
-        BaseElement::new(0),
-        BaseElement::new(1),
-        BaseElement::new(5),
+        BaseElement::from(0u8),
+        BaseElement::from(1u8),
+        BaseElement::from(5u8),
     
     ].to_vec();
     
@@ -48,9 +48,9 @@ fn test_mds() {
 #[test]
 fn test_constants() {
     let mut state = [
-        BaseElement::new(0),
-        BaseElement::new(1),
-        BaseElement::new(2),
+        BaseElement::from(0u8),
+        BaseElement::from(1u8),
+        BaseElement::from(2u8),
     
     ].to_vec();
     
@@ -64,9 +64,9 @@ fn test_constants() {
 #[test]
 fn test_permutation() {
     let mut state = [
-        BaseElement::new(0),
-        BaseElement::new(1),
-        BaseElement::new(2),
+        BaseElement::from(0u8),
+        BaseElement::from(1u8),
+        BaseElement::from(2u8),
         
         ].to_vec();
         
@@ -80,9 +80,9 @@ fn test_permutation() {
 #[test]
 fn test_hash() {
     let mut state = [
-        BaseElement::new(0),
-        BaseElement::new(1),
-        BaseElement::new(2),
+        BaseElement::from(0u8),
+        BaseElement::from(1u8),
+        BaseElement::from(2u8),
 
     ].to_vec();
 
@@ -96,9 +96,9 @@ fn test_hash() {
 #[test]
 fn test_element_digest() {
     let mut state = [
-        BaseElement::new(0),
-        BaseElement::new(1),
-        BaseElement::new(2),
+        BaseElement::from(0u8),
+        BaseElement::from(1u8),
+        BaseElement::from(2u8),
 
     ].to_vec();
 
