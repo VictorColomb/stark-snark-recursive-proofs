@@ -368,6 +368,14 @@ impl Deserializable for BaseElement {
     }
 }
 
+impl BaseElement{
+    pub fn to_le_bytes(&self) -> [u8; 32] {
+        let mut bytes = [0u8; 32];
+        self.0.to_little_endian(&mut bytes);
+        bytes
+    }
+}
+
 // FINITE FIELD ARITHMETIC
 // ================================================================================================
 
