@@ -276,35 +276,35 @@ impl From<U256> for BaseElement {
 impl From<u128> for BaseElement {
     /// Converts a 128-bit integer into a field element.
     fn from(value: u128) -> Self {
-        BaseElement(U256::from(value))
+        BaseElement::new(U256::from(value))
     }
 }
 
 impl From<u64> for BaseElement {
     /// Converts a 64-bit value into a field element.
     fn from(value: u64) -> Self {
-        BaseElement(U256::from(value))
+        BaseElement::new(U256::from(value))
     }
 }
 
 impl From<u32> for BaseElement {
     /// Converts a 32-bit value into a field element.
     fn from(value: u32) -> Self {
-        BaseElement(U256::from(value))
+        BaseElement::new(U256::from(value))
     }
 }
 
 impl From<u16> for BaseElement {
     /// Converts a 16-bit value into a field element.
     fn from(value: u16) -> Self {
-        BaseElement(U256::from(value))
+        BaseElement::new(U256::from(value))
     }
 }
 
 impl From<u8> for BaseElement {
     /// Converts an 8-bit value into a field element.
     fn from(value: u8) -> Self {
-        BaseElement(U256::from(value))
+        BaseElement::new(U256::from(value))
     }
 }
 
@@ -315,6 +315,13 @@ impl From<[u8; 32]> for BaseElement {
     fn from(bytes: [u8; 32]) -> Self {
         let value = U256::from_little_endian(&bytes);
         BaseElement::from(value)
+    }
+}
+
+impl From<[u64; 4]> for BaseElement {
+    /// Converts the value encoded in an array of 4 least significant first 64-bit integers.
+    fn from(value: [u64; 4]) -> Self {
+        BaseElement::new(U256(value))
     }
 }
 
@@ -333,7 +340,7 @@ impl<'a> TryFrom<&'a [u8]> for BaseElement {
                 value
             ));
         }
-        Ok(BaseElement(value))
+        Ok(BaseElement::new(value))
     }
 }
 
