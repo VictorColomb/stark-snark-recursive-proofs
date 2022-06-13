@@ -1,0 +1,17 @@
+# ide
+.vscode
+
+# python
+__pycache__/
+venv
+
+# circom & snarkjs
+*.ptau
+*_cpp/
+*.zkey
+*.r1cs
+*.sym
+*.wtns
+proof.json
+public.json
+verification_key.json
