@@ -7,18 +7,14 @@ mod poseidon;
 #[cfg(test)]
 mod tests;
 
-use super::{Digest,ElementHasher, Hasher, ByteDigest};
-//FIXME: f64 -> f256
+use super::{ElementHasher, Hasher, ByteDigest};
 use math::{FieldElement, StarkField};
 
-mod digest;
-pub use digest::ElementDigest;
 
 // POSEIDON WITH 256-BIT OUTPUT
 // ===============================================================================================
 /// Implementation of the [Hasher](super::Hasher) trait for POSEIDON hash function with 256-bit
 /// output.
-const DIGEST_SIZE : usize = 1;
 
 
 
