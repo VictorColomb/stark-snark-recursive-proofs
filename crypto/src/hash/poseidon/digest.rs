@@ -6,7 +6,7 @@
 use super::{Digest, DIGEST_SIZE};
 use core::slice;
 //FIXME: change f64 to f256
-use math::{fields::f64::BaseElement, StarkField};
+use math::{fields::f256::BaseElement, StarkField};
 use utils::{ByteReader, ByteWriter, Deserializable, DeserializationError, Serializable};
 
 // DIGEST TRAIT IMPLEMENTATIONS
@@ -35,7 +35,8 @@ impl Digest for ElementDigest {
     fn as_bytes(&self) -> [u8; 32] {
         let mut result = [0; 32];
 
-        result[..8].copy_from_slice(&self.0[0].as_int().to_le_bytes());
+        self.0[0].get_modulus_le_bytes(result[..8]);
+        result[..8].copy_from_slice(&self.0[0].as_int().to_little_endian());
         result[8..16].copy_from_slice(&self.0[1].as_int().to_le_bytes());
         result[16..24].copy_from_slice(&self.0[2].as_int().to_le_bytes());
         result[24..].copy_from_slice(&self.0[3].as_int().to_le_bytes());
