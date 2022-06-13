@@ -1,17 +1,12 @@
+use crate::hash::ByteDigest;
+
 //padding with 0s and a single one
 use super::param::*;
-use super::digest::ElementDigest;
 use std::vec::Vec;
-//FIXME: f64 to f256
 use math::{fields::f256::BaseElement,FieldElement};
 
-pub fn digest(input: &[u8]) -> ElementDigest{
+pub fn digest(input: &[u8]) -> ByteDigest<32> {
 
-    /* let num_chunks = if input.len() % 32 == 0 {
-        input.len() / 32
-    } else {
-        input.len() / 32 + 1
-    }; */
 
     let mut formatted_input = [BaseElement::ZERO;T];
 
@@ -27,22 +22,13 @@ pub fn digest(input: &[u8]) -> ElementDigest{
     let mut output = formatted_input.clone().to_vec();
 
     padder(&mut output);
-    hash(&mut output);
-
-    ElementDigest::new(vec_to_array(output))
-
-
-}
-
-pub fn elements_digest(input: &[BaseElement]) -> ElementDigest{
-
-    let mut temp = input.clone().to_vec();
-    padder(&mut temp); 
-
-    ElementDigest::new(hash(&mut temp))
     
 
+    ByteDigest(hash(&mut output))
+
+
 }
+
 
 pub fn padder(input: &mut Vec<BaseElement>){
 
@@ -63,7 +49,7 @@ pub fn padder(input: &mut Vec<BaseElement>){
 }
 
 
-pub fn hash(input: &mut Vec<BaseElement>) -> [BaseElement;RATE] {
+pub fn hash(input: &mut Vec<BaseElement>) -> [u8;32 * RATE] {
 
     let ref mut state = [BaseElement::ZERO;T].to_vec(); 
     
@@ -71,38 +57,44 @@ pub fn hash(input: &mut Vec<BaseElement>) -> [BaseElement;RATE] {
 
         //absorbtion
         for j in 0..RATE {
-            state[j] = state[j] + input[i*RATE+j]
+            state[j] += input[i*RATE+j]
         }
 
         permutation(state);
 
     }
 
-    state[..RATE].try_into().unwrap()
+    let mut output = [0_u8;32 * RATE];
+    for i in 0..RATE {
+        output[i..i + 32].copy_from_slice(&state[i].to_le_bytes())
+    }
+
+    output
 
 }
 
-pub fn permutation(state: &mut Vec<BaseElement>) {
+pub fn permutation(input: &mut Vec<BaseElement>) {
 
-    let ref mut temp = state.clone()[..T].to_vec();
+    let ref mut state = input.clone()[..T].to_vec();
 
     for j in 0..R_F/2 {
-        full_permutation(temp,j);
+        full_round(state,j);
     }
-
+    
     for j in 0..R_P {
-        partial_permutation(temp,j+R_F/2);
+        partial_round(state,j+R_F/2);
     }
-
+    
     for j in 0..R_F/2 {
-        full_permutation(temp,j + R_F/2 + R_P);
+        full_round(state,j + R_F/2 + R_P);
     }
 
-    state[..T].copy_from_slice(&temp);
+    input[..T].copy_from_slice(&state);
     
 }
 
-pub fn full_permutation(state: &mut Vec<BaseElement>, i : usize) {
+#[inline(always)]
+pub fn full_round(state: &mut Vec<BaseElement>, i : usize) {
 
     add_constants(state,i * T);
     apply_sbox(state);
@@ -110,7 +102,8 @@ pub fn full_permutation(state: &mut Vec<BaseElement>, i : usize) {
 
 }
 
-pub fn partial_permutation(state: &mut Vec<BaseElement>, i : usize) {
+#[inline(always)]
+pub fn partial_round(state: &mut Vec<BaseElement>, i : usize) {
 
     add_constants(state,i * T);
     state[0] = state[0].exp(ALPHA.into());
@@ -149,10 +142,3 @@ pub fn apply_mds<E: FieldElement + From<BaseElement>>(state: &mut [E]) {
     state.copy_from_slice(&result);
 }
 
-
-//HELPER FUNCTION
-
-pub fn vec_to_array<T, const N: usize>(v: Vec<T>) -> [T; N] {
-    v.try_into()
-        .unwrap_or_else(|v: Vec<T>| panic!("Expected a Vec of length {} but it was {}", N, v.len()))
-}

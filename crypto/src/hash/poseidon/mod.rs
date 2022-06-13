@@ -1,14 +1,15 @@
 mod param;
-use param::*;
+use core::marker::PhantomData;
+
 
 mod poseidon;
 
 #[cfg(test)]
 mod tests;
 
-use super::{Digest,ElementHasher, Hasher};
+use super::{Digest,ElementHasher, Hasher, ByteDigest};
 //FIXME: f64 -> f256
-use math::{fields::f256::{BaseElement, U256}, FieldElement, StarkField};
+use math::{FieldElement, StarkField};
 
 mod digest;
 pub use digest::ElementDigest;
@@ -21,11 +22,11 @@ const DIGEST_SIZE : usize = 1;
 
 
 
-pub struct Poseidon();
+pub struct Poseidon<B: StarkField>(PhantomData<B>);
 
-impl Hasher for Poseidon {
+impl<B:StarkField> Hasher for Poseidon<B> {
     // TODO: ByteDigest<32>; ?  See SHA3 / RESCUE
-    type Digest = ElementDigest;
+    type Digest = ByteDigest<32>;
 
     fn hash(bytes: &[u8]) -> Self::Digest {
         // return the first [RATE] elements of the state as hash result
@@ -33,29 +34,29 @@ impl Hasher for Poseidon {
     }
 
     fn merge(values: &[Self::Digest; 2]) -> Self::Digest {
-        poseidon::elements_digest(Self::Digest::digests_as_elements(values)).into()
+        let mut data = [0; 64];
+        data[..32].copy_from_slice(values[0].0.as_slice());
+        data[32..].copy_from_slice(values[1].0.as_slice());
+        poseidon::digest(&data)
     }
 
     fn merge_with_int(seed: Self::Digest, value: u64) -> Self::Digest {
-        //FIXME: T+2??
-        let mut state = [BaseElement::ZERO; T+2];
-        state[0..T].copy_from_slice(seed.as_elements());
-        state[T] = BaseElement::from(value);
-        if U256::from(value) > BaseElement::MODULUS {
-            state[T + 1] = BaseElement::new(U256::from(value) / BaseElement::MODULUS);
-        }
-        poseidon::elements_digest(&state)
+        let mut data = [0; 40];
+        data[..32].copy_from_slice(&seed.0);
+        data[32..].copy_from_slice(&value.to_le_bytes());
+        poseidon::digest(&data)
     }
 }
 
-impl ElementHasher for Poseidon {
-    type BaseField = BaseElement;
+impl<B: StarkField> ElementHasher for Poseidon<B> {
+    type BaseField = B;
 
     fn hash_elements<E: FieldElement<BaseField = Self::BaseField>>(elements: &[E]) -> Self::Digest {
-        // convert the elements into a list of base field elements
-        let elements = E::as_base_elements(elements);
 
-        poseidon::elements_digest(elements)
+        assert!(B::IS_CANONICAL);
+
+        let bytes = E::elements_as_bytes(elements);
+        poseidon::digest(bytes)
 
     }
 }

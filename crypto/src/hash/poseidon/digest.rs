@@ -3,7 +3,7 @@
 // This source code is licensed under the MIT license found in the
 // LICENSE file in the root directory of this source tree.
 
-use super::{Digest, DIGEST_SIZE};
+use super::{Digest, ByteDigest,DIGEST_SIZE};
 use core::slice;
 use math::{fields::f256::BaseElement};
 use utils::{ByteReader, ByteWriter, Deserializable, DeserializationError, Serializable};
@@ -28,6 +28,10 @@ impl ElementDigest {
         let len = digests.len() * DIGEST_SIZE;
         unsafe { slice::from_raw_parts(p as *const BaseElement, len) }
     }
+    
+    pub fn to_byte_digest(&self) -> ByteDigest<32> {
+        ByteDigest(self.0[0].to_le_bytes())
+    }
 }
 
 impl Digest for ElementDigest {
@@ -36,6 +40,7 @@ impl Digest for ElementDigest {
         self.0[0].to_le_bytes()
 
     }
+
 }
 
 impl Default for ElementDigest {

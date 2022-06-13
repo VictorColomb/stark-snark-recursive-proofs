@@ -29,6 +29,8 @@ FIELD_SIZE = int(sys.argv[_sage_const_3 ]) # n
 NUM_CELLS = int(sys.argv[_sage_const_4 ]) # t
 R_F_FIXED = int(sys.argv[_sage_const_5 ])
 R_P_FIXED = int(sys.argv[_sage_const_6 ])
+C = 2
+
 
 INIT_SEQUENCE = []
 
@@ -37,7 +39,7 @@ if FIELD == _sage_const_1  and len(sys.argv) != _sage_const_8 :
     print("Please specify a prime number (in hex format)!")
     exit()
 elif FIELD == _sage_const_1  and len(sys.argv) == _sage_const_8 :
-    PRIME_NUMBER = int(sys.argv[_sage_const_7 ]) # e.g. 0xa7, 0xFFFFFFFFFFFFFEFF, 0xa1a42c3efd6dbfe08daa6041b36322ef
+    PRIME_NUMBER = int(sys.argv[_sage_const_7 ]) # BaseElement.g. 0xa7, 0xFFFFFFFFFFFFFEFF, 0xa1a42c3efd6dbfe08daa6041b36322ef
 elif FIELD == _sage_const_0 :
     PRIME_NUMBER = GF(_sage_const_2 )['x'](GF2X_BuildIrred_list(FIELD_SIZE))
 
@@ -46,6 +48,10 @@ if FIELD == _sage_const_1 :
     F = GF(PRIME_NUMBER)
 elif FIELD == _sage_const_0 :
     F = GF(_sage_const_2 **FIELD_SIZE, name='x', modulus = PRIME_NUMBER, names=('x',)); (x,) = F._first_ngens(1)
+
+def to_u256(b):
+    return hex(b)
+
 
 def grain_sr_generator():
     bit_sequence = INIT_SEQUENCE
@@ -108,7 +114,7 @@ def generate_constants(field, n, t, R_F, R_P, prime_number):
     return round_constants
 
 def print_round_constants(round_constants, n, field):
-    print("const ROUND_CONSTANTS: [u256;",len(round_constants),"] =",[entry for entry in round_constants],";\n")
+    print("pub const ROUND_CONSTANTS: [BaseElement;",len(round_constants),"] =",str([to_u256(entry) for entry in round_constants]).replace("'",""),";\n")
 
 def create_mds_p(n, t):
     M = matrix(F, t, t)
@@ -335,28 +341,29 @@ def generate_matrix(FIELD, FIELD_SIZE, NUM_CELLS):
         return mds_matrix
 
 def print_linear_layer(M, n, t):
-    print("const  T : u128 = ", t,";\n")
-    print("const R_F : u128 = ", R_F_FIXED,";")
-    print("const R_P : u128 = ", R_P_FIXED,";")
+    print("pub const T : usize = ", t,";\n")
+    print("pub const R_F : usize = ", R_F_FIXED,";")
+    print("pub const R_P : usize = ", R_P_FIXED,";")
     if not algorithm_1(M, NUM_CELLS) and algorithm_2(M, NUM_CELLS) and algorithm_3(M, NUM_CELLS):
         print("Unsafe MDS")
         exit()
     hex_length = int(ceil(float(n) / _sage_const_4 )) + _sage_const_2  # +2 for "0x"
 
-    if FIELD == _sage_const_1 :
-        print("const P: u256 = ",PRIME_NUMBER,";\n")
     matrix_string = "["
     for i in range(_sage_const_0 , t):
         if FIELD == _sage_const_0 :
-            matrix_string += str([entry for entry in M[i]])
+            matrix_string += str([to_u256(entry) for entry in M[i]]).replace("'","")
         elif FIELD == _sage_const_1 :
-            matrix_string += str([entry for entry in M[i]])
+            matrix_string += str([to_u256(entry) for entry in M[i]]).replace("'","")
         if i < (t-_sage_const_1 ):
             matrix_string += ","
-    matrix_string += "]"
-    print("const MDS: [u256; T * T] = ", matrix_string,";\n")
+    matrix_string = matrix_string
+    matrix_string = matrix_string
+    print("pub const MDS: [[BaseElement; T];T]  = ", matrix_string,"];\n")
 
 # Init
+print("use math::fields::f256::{BaseElement,U256};")
+
 init_generator(FIELD, SBOX, FIELD_SIZE, NUM_CELLS, R_F_FIXED, R_P_FIXED)
 
 # Round constants
@@ -368,6 +375,11 @@ linear_layer = generate_matrix(FIELD, FIELD_SIZE, NUM_CELLS)
 
 print_linear_layer(linear_layer, FIELD_SIZE, NUM_CELLS)
 print_round_constants(round_constants, FIELD_SIZE, FIELD)
+
+print("pub const RATE : usize = ",NUM_CELLS - C,";\n")
+print("pub const ALPHA : u32 = ", 5 ,";\n")
+
+
 
 
 
