@@ -66,7 +66,7 @@ use math::{
 
 pub use crypto;
 use crypto::{
-    hashers::{Blake3_192, Blake3_256, Sha3_256},
+    hashers::{Blake3_192, Blake3_256, Sha3_256,Poseidon},
     ElementHasher, MerkleTree,
 };
 
@@ -165,6 +165,8 @@ pub trait Prover {
                 HashFunction::Blake3_256 => self.generate_proof::<Self::BaseField, Blake3_256<Self::BaseField>>(trace),
                 HashFunction::Blake3_192 => self.generate_proof::<Self::BaseField, Blake3_192<Self::BaseField>>(trace),
                 HashFunction::Sha3_256 => self.generate_proof::<Self::BaseField, Sha3_256<Self::BaseField>>(trace),
+                //FIXME: <Basefield> ??
+                HashFunction::Poseidon => self.generate_proof::<Self::BaseField, Poseidon>(trace),
             },
             FieldExtension::Quadratic => {
                 if !<QuadExtension<Self::BaseField>>::is_supported() {
@@ -174,6 +176,7 @@ pub trait Prover {
                     HashFunction::Blake3_256 => self.generate_proof::<QuadExtension<Self::BaseField>, Blake3_256<Self::BaseField>>(trace),
                     HashFunction::Blake3_192 => self.generate_proof::<QuadExtension<Self::BaseField>, Blake3_192<Self::BaseField>>(trace),
                     HashFunction::Sha3_256 => self.generate_proof::<QuadExtension<Self::BaseField>, Sha3_256<Self::BaseField>>(trace),
+                    HashFunction::Poseidon => self.generate_proof::<QuadExtension<Self::BaseField>, Poseidon>(trace),
                 }
             }
             FieldExtension::Cubic => {
@@ -184,6 +187,7 @@ pub trait Prover {
                     HashFunction::Blake3_256 => self.generate_proof::<CubeExtension<Self::BaseField>, Blake3_256<Self::BaseField>>(trace),
                     HashFunction::Blake3_192 => self.generate_proof::<CubeExtension<Self::BaseField>, Blake3_192<Self::BaseField>>(trace),
                     HashFunction::Sha3_256 => self.generate_proof::<CubeExtension<Self::BaseField>, Sha3_256<Self::BaseField>>(trace),
+                    HashFunction::Poseidon => self.generate_proof::<CubeExtension<Self::BaseField>, Psoseidon>(trace),
                 }
             }
         }

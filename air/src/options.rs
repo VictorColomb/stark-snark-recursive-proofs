@@ -32,6 +32,13 @@ pub enum HashFunction {
     ///
     /// When this function is used in the STARK protocol, proof security cannot exceed 128 bits.
     Sha3_256 = 3,
+    
+    /// Poseidon hash function with 256 bit output.
+    ///
+    /// When this function is used in the STARK protocol, proof security cannot exceed 128 bits.
+    Poseidon = 4,
+
+
 }
 
 /// Defines an extension field for the composition polynomial.
@@ -303,6 +310,7 @@ impl HashFunction {
             Self::Blake3_192 => 96,
             Self::Blake3_256 => 128,
             Self::Sha3_256 => 128,
+            Self::Poseidon => 128,
         }
     }
 }
@@ -321,6 +329,7 @@ impl Deserializable for HashFunction {
             1 => Ok(HashFunction::Blake3_192),
             2 => Ok(HashFunction::Blake3_256),
             3 => Ok(HashFunction::Sha3_256),
+            4 => Ok(HashFunction::Poseidon),
             value => Err(DeserializationError::InvalidValue(format!(
                 "value {} cannot be deserialized as HashFunction enum",
                 value

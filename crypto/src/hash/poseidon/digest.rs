@@ -66,7 +66,7 @@ impl Deserializable for ElementDigest {
 
 
 
-        Ok(Self(BaseElement([e1, e2, e3, e4])))
+        Ok(Self([e1, e2, e3, e4]))
     }
 }
 

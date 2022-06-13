@@ -41,7 +41,7 @@ pub struct ExampleOptions {
     #[structopt(subcommand)]
     pub example: ExampleType,
 
-    /// Hash function used in the protocol
+    /// Hash function used in the protocol TODO:Poseidon
     #[structopt(short = "h", long = "hash_fn", default_value = "blake3_256")]
     hash_fn: String,
 
@@ -80,6 +80,7 @@ impl ExampleOptions {
             "blake3_192" => HashFunction::Blake3_192,
             "blake3_256" => HashFunction::Blake3_256,
             "sha3_256" => HashFunction::Sha3_256,
+            "poseidon" => HashFunction::Poseidon,
             val => panic!("'{}' is not a valid hash function option", val),
         };
 

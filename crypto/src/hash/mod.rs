@@ -17,7 +17,7 @@ mod rescue;
 pub use rescue::{Rp62_248, Rp64_256};
 
 mod poseidon;
-
+pub use poseidon::Poseidon;
 // HASHER TRAITS
 // ================================================================================================
 
