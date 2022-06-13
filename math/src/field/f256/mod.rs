@@ -62,8 +62,11 @@ impl BaseElement {
     where
         T: Into<U256>,
     {
-        let v: U256 = value.into();
-        BaseElement(if v < M { v } else { v - M })
+        let mut v: U256 = value.into();
+        while v >= M {
+            v -= M;
+        }
+        BaseElement(v)
     }
 }
 
@@ -390,7 +393,7 @@ impl BaseElement{
     }
 
     pub fn from_le_bytes(bytes: &[u8]) -> Self {
-        Self(U256::from_little_endian(bytes))
+        Self::new(U256::from_little_endian(bytes))
     }
 }
 
