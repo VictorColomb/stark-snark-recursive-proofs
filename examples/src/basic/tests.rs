@@ -5,6 +5,6 @@ use super::verify_proof;
 
 #[test]
 pub fn test() {
-    let (result,proof) = generate_proof();
-    verify_proof(BaseElement::new(1),result,proof);
+    let (result, proof) = generate_proof();
+    verify_proof(BaseElement::new(1), result, proof);
 }

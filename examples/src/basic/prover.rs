@@ -1,26 +1,23 @@
-use winterfell::math::{fields::f128::BaseElement,FieldElement};
-use winterfell::{
-    Prover, Trace,ProofOptions,TraceTable
-};
-use super::air::{WorkAir,PublicInputs};
+use super::air::{PublicInputs, WorkAir};
+use winterfell::math::{fields::f128::BaseElement, FieldElement};
+use winterfell::{ProofOptions, Prover, Trace, TraceTable};
 // Our prover needs to hold STARK protocol parameters which are specified via ProofOptions
 // struct.
 pub struct WorkProver {
-    options: ProofOptions
+    options: ProofOptions,
 }
-
 
 impl WorkProver {
     pub fn new(options: ProofOptions) -> Self {
         Self { options }
     }
 
-    pub fn build_trace(&self,start: BaseElement, n: usize) -> TraceTable<BaseElement> {
+    pub fn build_trace(&self, start: BaseElement, n: usize) -> TraceTable<BaseElement> {
         // Instantiate the trace with a given width and length; this will allocate all
         // required memory for the trace
         let trace_width = 2;
         let mut trace = TraceTable::new(trace_width, n);
-    
+
         // Fill the trace with data; the first closure initializes the first state of the
         // computation; the second closure computes the next state of the computation based
         // on its current state.
@@ -32,15 +29,12 @@ impl WorkProver {
             |_, state| {
                 state[0] += BaseElement::ONE;
                 state[1] += state[0];
-             },
+            },
         );
 
         trace
     }
-    
 }
-
-
 
 // When implementing Prover trait we set the `Air` associated type to the AIR of the
 // computation we defined previously, and set the `Trace` associated type to `TraceTable`
@@ -58,8 +52,6 @@ impl Prover for WorkProver {
             result: trace.get(1, last_step),
         }
     }
-
-    
 
     fn options(&self) -> &ProofOptions {
         &self.options

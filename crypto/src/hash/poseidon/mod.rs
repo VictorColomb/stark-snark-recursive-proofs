@@ -1,26 +1,22 @@
 mod param;
 use core::marker::PhantomData;
 
-
 mod poseidon;
 
 #[cfg(test)]
 mod tests;
 
-use super::{ElementHasher, Hasher, ByteDigest};
+use super::{ByteDigest, ElementHasher, Hasher};
 use math::{FieldElement, StarkField};
-
 
 // POSEIDON WITH 256-BIT OUTPUT
 // ===============================================================================================
 /// Implementation of the [Hasher](super::Hasher) trait for POSEIDON hash function with 256-bit
 /// output.
 
-
-
 pub struct Poseidon<B: StarkField>(PhantomData<B>);
 
-impl<B:StarkField> Hasher for Poseidon<B> {
+impl<B: StarkField> Hasher for Poseidon<B> {
     // TODO: ByteDigest<32>; ?  See SHA3 / RESCUE
     type Digest = ByteDigest<32>;
 
@@ -48,11 +44,9 @@ impl<B: StarkField> ElementHasher for Poseidon<B> {
     type BaseField = B;
 
     fn hash_elements<E: FieldElement<BaseField = Self::BaseField>>(elements: &[E]) -> Self::Digest {
-
         assert!(B::IS_CANONICAL);
 
         let bytes = E::elements_as_bytes(elements);
         poseidon::digest(bytes)
-
     }
 }

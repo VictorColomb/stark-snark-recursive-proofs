@@ -1,7 +1,6 @@
-
 use winterfell::{
-    Air, AirContext, Assertion, ByteWriter, EvaluationFrame, ProofOptions, Serializable,
-    TraceInfo, TransitionConstraintDegree,
+    Air, AirContext, Assertion, ByteWriter, EvaluationFrame, ProofOptions, Serializable, TraceInfo,
+    TransitionConstraintDegree,
 };
 
 use winterfell::math::{fields::f128::BaseElement, FieldElement};
@@ -46,8 +45,8 @@ impl Air for WorkAir {
         // mode, an invalid proof will be generated which will not be accepted by any verifier.
         let degrees = vec![
             TransitionConstraintDegree::new(1),
-            TransitionConstraintDegree::new(1)
-            ];
+            TransitionConstraintDegree::new(1),
+        ];
 
         // We also need to specify the exact number of assertions we will place against the
         // execution trace. This number must be the same as the number of items in a vector
@@ -75,12 +74,10 @@ impl Air for WorkAir {
         let current = &frame.current();
         let next = &frame.next();
 
-        
         // Then, we'll subtract the expected next state from the actual next state; this will
         // evaluate to zero if and only if the expected and actual states are the same.
         result[0] = next[0] - (current[0] + E::ONE);
         result[1] = next[1] - (current[1] + current[0] + E::ONE);
-        
     }
 
     // Here, we'll define a set of assertions about the execution trace which must be satisfied

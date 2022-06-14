@@ -10,4 +10,3 @@ pub const ROUND_CONSTANTS: [BaseElement; 195 ] = [BaseElement(U256([107548267488
 pub const RATE : usize =  1 ;
 
 pub const ALPHA : u32 =  5 ;
-
