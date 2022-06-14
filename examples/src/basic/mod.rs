@@ -16,7 +16,7 @@ use winterfell::{FieldExtension, HashFunction, StarkProof};
 pub fn generate_proof() -> (BaseElement, StarkProof) {
     // We'll just hard-code the parameters here for this example.
     let start = BaseElement::new(1);
-    let n = 8;
+    let n = 2048;
 
     // Define proof options; these will be enough for ~96-bit security level.
     let options = ProofOptions::new(
@@ -40,12 +40,12 @@ pub fn generate_proof() -> (BaseElement, StarkProof) {
     (result, proof.unwrap())
 }
 
-pub fn verify_proof(start: BaseElement, result: BaseElement, proof: StarkProof) {
+pub fn verify_proof(start: BaseElement, result: BaseElement, proof: &StarkProof) {
     // The number of steps and options are encoded in the proof itself, so we
     // don't need to pass them explicitly to the verifier.
     let pub_inputs = PublicInputs { start, result };
-    match winterfell::verify::<WorkAir>(proof, pub_inputs) {
-        Ok(_) => println!("yay! all good!"),
+    match winterfell::verify::<WorkAir>(proof.clone(), pub_inputs) {
+        Ok(_) => assert_eq!(1,1),
         Err(e) => {
             println!("{}", e);
             panic!("something went terribly wrong!");

@@ -46,3 +46,7 @@ harness = false
 [[bench]]
 name = "rescue"
 harness = false
+
+[[bench]]
+name = "basic"
+harness = false

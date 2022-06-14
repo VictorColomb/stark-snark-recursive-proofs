@@ -81,15 +81,24 @@ pub fn full_round(state: &mut Vec<BaseElement>, i : usize) {
 
     add_constants(state,i);
     apply_sbox(state);
-    apply_mds(state);
+    ma(state);
 }
 
 
 pub fn partial_round(state: &mut Vec<BaseElement>, i : usize) {
 
-    add_constants(state,i);
+    if i == R_F / 2 {
+        add_constants(state,i);
+        matrix_mul(state);
+    }
+
     state[0] = state[0].exp(ALPHA.into());
-    apply_mds(state);
+    
+    if i < R_F / 2 + R_P - 1 {
+        add_constants(state,i);
+    }
+
+    matrix_mul(state);
 }
 
 
@@ -107,12 +116,12 @@ pub fn apply_sbox<E: FieldElement>(state: &mut [E]) {
 }
 
 
-pub fn apply_mds<E: FieldElement + From<BaseElement>>(state: &mut [E]) {
+pub fn matrix_mul<E: FieldElement + From<BaseElement>>(state: &mut [E]) {
     let mut result = [E::ZERO; T];
     let mut temp = [E::ZERO; T];
     for i in 0..T {
         for j in 0..T {
-            temp[j] = E::from(MDS[i][j]) * state[j];
+            temp[j] = E::from(MP[i][j]) * state[j];
         }
 
         for j in 0..T {

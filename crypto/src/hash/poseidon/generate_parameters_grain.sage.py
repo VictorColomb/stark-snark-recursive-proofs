@@ -1,5 +1,4 @@
 
-from sage.rings.polynomial.polynomial_gf2x import GF2X_BuildIrred_list
 from sage.all_cmdline import *   # import sage library
 
 _sage_const_7 = Integer(7)
@@ -47,7 +46,7 @@ FIELD_SIZE = int(sys.argv[_sage_const_3])  # n
 NUM_CELLS = int(sys.argv[_sage_const_4])  # t
 R_F_FIXED = int(sys.argv[_sage_const_5])
 R_P_FIXED = int(sys.argv[_sage_const_6])
-C = 2
+C = 1
 
 
 INIT_SEQUENCE = []
@@ -59,8 +58,6 @@ if FIELD == _sage_const_1 and len(sys.argv) != _sage_const_8:
 elif FIELD == _sage_const_1 and len(sys.argv) == _sage_const_8:
     # BaseElement.g. 0xa7, 0xFFFFFFFFFFFFFEFF, 0xa1a42c3efd6dbfe08daa6041b36322ef
     PRIME_NUMBER = int(sys.argv[_sage_const_7])
-elif FIELD == _sage_const_0:
-    PRIME_NUMBER = GF(_sage_const_2)['x'](GF2X_BuildIrred_list(FIELD_SIZE))
 
 F = None
 if FIELD == _sage_const_1:
@@ -162,10 +159,6 @@ def generate_constants(field, n, t, R_F, R_P, prime_number):
             round_constants.append(random_int)
     return round_constants
 
-
-def print_round_constants(round_constants, n, field):
-    print("pub const ROUND_CONSTANTS: [BaseElement;", len(round_constants), "] =", str(
-        [to_u256(entry) for entry in round_constants]).replace("'", ""), ";\n")
 
 
 def create_mds_p(n, t):
@@ -409,6 +402,80 @@ def generate_matrix(FIELD, FIELD_SIZE, NUM_CELLS):
         return mds_matrix
 
 
+############## Optimization of partial rounds
+
+def calc_equivalent_matrices(MDS):
+    # Following idea: Split M into M' * M'', where M'' is "cheap" and M' can move before the partial nonlinear layer
+    # The "previous" matrix layer is then M * M'. Due to the construction of M', the M[0,0] and v values will be the same for the new M' (and I also, obviously)
+    # Thus: Compute the matrices, store the w_hat and v_hat values
+
+    t = NUM_CELLS
+
+    #FIXME: MDS_matrix_field_transpose??
+    MDS_matrix_field_transpose = MDS.transpose()
+
+    w_hat_collection = []
+    v_collection = []
+    v = MDS_matrix_field_transpose[[0], list(range(1,t))]
+    # print "M:", MDS_matrix_field_transpose
+    # print "v:", v
+    M_mul = MDS_matrix_field_transpose
+    M_i = matrix(F, t, t)
+    for i in range(R_P_FIXED - 1, -1, -1):
+        M_hat = M_mul[list(range(1,t)), list(range(1,t))]
+        w = M_mul[list(range(1,t)), [0]]
+        v = M_mul[[0], list(range(1,t))]
+        v_collection.append(v.list())
+        w_hat = M_hat.inverse() * w
+        w_hat_collection.append(w_hat.list())
+
+        # Generate new M_i, and multiplication M * M_i for "previous" round
+        M_i = matrix.identity(t)
+        M_i[list(range(1,t)), list(range(1,t))] = M_hat
+        #M_mul = MDS_matrix_field_transpose * M_i
+
+        test_mat = matrix(F, t, t)
+        test_mat[[0], list(range(0, t))] = MDS_matrix_field_transpose[[0], list(range(0, t))]
+        test_mat[[0], list(range(1, t))] = v
+        test_mat[list(range(1, t)), [0]] = w_hat
+        test_mat[list(range(1,t)), list(range(1,t))] = matrix.identity(t-1)
+
+        # print M_mul == M_i * test_mat
+        M_mul = MDS_matrix_field_transpose * M_i
+        #return[M_i, test_mat]
+
+
+        #M_mul = MDS_matrix_field_transpose * M_i
+        #exit()
+    #exit()
+        
+
+    # print [M_i, w_hat_collection, MDS_matrix_field_transpose[0, 0], v.list()]
+    return [M_i, v_collection, w_hat_collection, MDS_matrix_field_transpose[0, 0]]
+
+def calc_equivalent_constants(constants,MDS):
+    t = NUM_CELLS
+    constants_temp = [constants[index:index+t] for index in range(0, len(constants), t)]
+
+    #FIXME: MDS_matrix_field_transpose??
+    MDS_matrix_field_transpose = MDS.transpose()
+
+    # Start moving round constants up
+    # Calculate c_i' = M^(-1) * c_(i+1)
+    # Split c_i': Add c_i'[0] AFTER the S-box, add the rest to c_i
+    # I.e.: Store c_i'[0] for each of the partial rounds, and make c_i = c_i + c_i' (where now c_i'[0] = 0)
+    num_rounds = R_F_FIXED + R_P_FIXED
+    R_f = R_F_FIXED // 2
+    for i in range(num_rounds - 2 - R_f, R_f - 1, -1):
+        inv_cip1 = list(vector(constants_temp[i+1]) * MDS_matrix_field_transpose.inverse())
+        constants_temp[i] = list(vector(constants_temp[i]) + vector([0] + inv_cip1[1:]))
+        constants_temp[i+1] = [inv_cip1[0]] + [0] * (t-1)
+
+    return constants_temp
+
+
+########### formatting to .rs file helper functions ##########
+
 def print_linear_layer(M, n, t):
     print("pub const T : usize = ", t, ";\n")
     print("pub const R_F : usize = ", R_F_FIXED, ";")
@@ -416,9 +483,23 @@ def print_linear_layer(M, n, t):
     if not algorithm_1(M, NUM_CELLS) and algorithm_2(M, NUM_CELLS) and algorithm_3(M, NUM_CELLS):
         print("Unsafe MDS")
         exit()
-    hex_length = int(ceil(float(n) / _sage_const_4)) + \
-        _sage_const_2  # +2 for "0x"
+    print_matrix("MDS",M)
+    eq_mat = calc_equivalent_matrices(M)
+    print_matrix("MP",eq_mat[0])
+    print_matrix("V_COLLECTION",eq_mat[1])
+    print_matrix("W_HAT_COLLECTION",eq_mat[2])
+    print("pub const M_0_0: BaseElement = ",to_u256(eq_mat[3]),";\n")
+    
 
+
+
+def print_matrix(name:str,M):
+    
+    try:
+        t = M.nrows()
+    except:
+        t = len(M)
+    
     matrix_string = "["
     for i in range(_sage_const_0, t):
         if FIELD == _sage_const_0:
@@ -431,29 +512,38 @@ def print_linear_layer(M, n, t):
             matrix_string += ","
     matrix_string = matrix_string
     matrix_string = matrix_string
-    print("pub const MDS: [[BaseElement; T];T]  = ", matrix_string, "];\n")
+    try:
+        print("pub const ",name,": [[BaseElement; ",M.ncols(),"];",M.nrows(),"]  = ", matrix_string, "];\n")
+    except:
+        print("pub const ",name,": [[BaseElement; ",len(M[0]),"];",len(M),"]  = ", matrix_string, "];\n")
+
+
+def print_round_constants(round_constants, n, field):
+    print("pub const ROUND_CONSTANTS: [BaseElement;", len(round_constants), "] =", str(
+        [to_u256(entry) for entry in round_constants]).replace("'", ""), ";\n")
+
+
+
+
+############## MAIN ##############
 
 
 # Init
 print("use math::fields::f256::{BaseElement,U256};")
-
-
-def TYPE(i):
-    return str("BaseElement::new("+str(i)+")")
-
 
 init_generator(FIELD, SBOX, FIELD_SIZE, NUM_CELLS, R_F_FIXED, R_P_FIXED)
 
 # Round constants
 round_constants = generate_constants(
     FIELD, FIELD_SIZE, NUM_CELLS, R_F_FIXED, R_P_FIXED, PRIME_NUMBER)
-
 # Matrix
 linear_layer = generate_matrix(FIELD, FIELD_SIZE, NUM_CELLS)
 
-
-print_linear_layer(linear_layer, FIELD_SIZE, NUM_CELLS)
-print_round_constants(round_constants, FIELD_SIZE, FIELD)
+rc = calc_equivalent_constants(round_constants,linear_layer)
 
 print("pub const RATE : usize = ", NUM_CELLS - C, ";\n")
+print("pub const DIGEST_SIZE : usize = ", 1, ";\n")
 print("pub const ALPHA : u32 = ", 5, ";\n")
+print_linear_layer(linear_layer, FIELD_SIZE, NUM_CELLS)
+print_matrix("ROUND_CONSTANTS",rc)
+
