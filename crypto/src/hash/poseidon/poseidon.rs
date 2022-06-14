@@ -6,26 +6,26 @@ use math::{fields::f256::BaseElement, FieldElement};
 use std::vec::Vec;
 
 pub fn digest(input: &[u8]) -> ByteDigest<32> {
-    let mut formatted_input = [BaseElement::ZERO; T];
 
-    for (i, chunk) in input.chunks(32).enumerate() {
-        // convert the bytes into a field element and absorb it into the rate portion of the
-        // state; if the rate is filled up, apply the Rescue permutation and start absorbing
-        // again from zero index.
-        formatted_input[i] = BaseElement::from_le_bytes(chunk);
+    let mut formatted_input: Vec<BaseElement> = vec![];
+
+    for chunk in input.chunks(32) {
+
+        formatted_input.push(BaseElement::from_le_bytes(chunk));
+
     }
 
-    let mut output = formatted_input.clone().to_vec();
+    let mut output = formatted_input.clone();
 
     padder(&mut output);
 
     ByteDigest(hash(&mut output))
 }
 
-pub fn padder(input: &mut Vec<BaseElement>) {
+pub fn padder(input: &mut Vec<BaseElement>){
+
     let l = input.len();
-    assert_eq!(l, T);
-    let padded_length = (l / RATE + 1) * RATE;
+    let padded_length = (l/RATE +1) * RATE;
 
     if l != padded_length {
         input.push(BaseElement::ONE);
@@ -52,9 +52,11 @@ pub fn hash(input: &mut Vec<BaseElement>) -> [u8; 32 * RATE] {
     for i in 0..RATE {
         output[i..i + 32].copy_from_slice(&state[i].to_le_bytes())
     }
-
+    
     output
+    
 }
+
 
 pub fn permutation(input: &mut Vec<BaseElement>) {
     let ref mut state = input.clone()[..T].to_vec();
@@ -74,35 +76,37 @@ pub fn permutation(input: &mut Vec<BaseElement>) {
     input[..T].copy_from_slice(&state);
 }
 
-#[inline(always)]
-pub fn full_round(state: &mut Vec<BaseElement>, i: usize) {
-    add_constants(state, i * T);
+
+pub fn full_round(state: &mut Vec<BaseElement>, i : usize) {
+
+    add_constants(state,i * T);
     apply_sbox(state);
     apply_mds(state);
 }
 
-#[inline(always)]
-pub fn partial_round(state: &mut Vec<BaseElement>, i: usize) {
-    add_constants(state, i * T);
+
+pub fn partial_round(state: &mut Vec<BaseElement>, i : usize) {
+
+    add_constants(state,i * T);
     state[0] = state[0].exp(ALPHA.into());
     apply_mds(state);
 }
 
-#[inline(always)]
+
 pub fn add_constants(state: &mut [BaseElement], offset: usize) {
     for i in 0..T {
         state[i] += ROUND_CONSTANTS[offset + i];
     }
 }
 
-#[inline(always)]
+
 pub fn apply_sbox<E: FieldElement>(state: &mut [E]) {
     for i in 0..T {
         state[i] = state[i].exp(ALPHA.into());
     }
 }
 
-#[inline(always)]
+
 pub fn apply_mds<E: FieldElement + From<BaseElement>>(state: &mut [E]) {
     let mut result = [E::ZERO; T];
     let mut temp = [E::ZERO; T];

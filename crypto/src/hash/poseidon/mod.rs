@@ -16,8 +16,7 @@ use math::{FieldElement, StarkField};
 
 pub struct Poseidon<B: StarkField>(PhantomData<B>);
 
-impl<B: StarkField> Hasher for Poseidon<B> {
-    // TODO: ByteDigest<32>; ?  See SHA3 / RESCUE
+impl<B:StarkField> Hasher for Poseidon<B> {
     type Digest = ByteDigest<32>;
 
     fn hash(bytes: &[u8]) -> Self::Digest {

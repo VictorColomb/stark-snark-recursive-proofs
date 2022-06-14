@@ -16,7 +16,7 @@ use winterfell::{FieldExtension, HashFunction, StarkProof};
 pub fn generate_proof() -> (BaseElement, StarkProof) {
     // We'll just hard-code the parameters here for this example.
     let start = BaseElement::new(1);
-    let n = 2048;
+    let n = 8;
 
     // Define proof options; these will be enough for ~96-bit security level.
     let options = ProofOptions::new(

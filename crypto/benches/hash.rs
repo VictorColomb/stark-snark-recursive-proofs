@@ -7,7 +7,7 @@ use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion
 use math::fields::f128;
 use rand_utils::rand_value;
 use winter_crypto::{
-    hashers::{Blake3_256, Rp62_248, Rp64_256, Sha3_256},
+    hashers::{Blake3_256, Rp62_248, Rp64_256, Sha3_256,Poseidon},
     Hasher,
 };
 
@@ -19,6 +19,9 @@ type Sha3Digest = <Sha3 as Hasher>::Digest;
 
 type Rp62_248Digest = <Rp62_248 as Hasher>::Digest;
 type Rp64_256Digest = <Rp64_256 as Hasher>::Digest;
+
+type PoseidonHash = Poseidon<f128::BaseElement>;
+type PoseidonDigest = <PoseidonHash as Hasher>::Digest;
 
 fn blake3(c: &mut Criterion) {
     let v: [Blake3Digest; 2] = [Blake3::hash(&[1u8]), Blake3::hash(&[2u8])];
@@ -82,11 +85,11 @@ fn rescue248(c: &mut Criterion) {
 
 fn rescue256(c: &mut Criterion) {
     let v: [Rp64_256Digest; 2] = [Rp64_256::hash(&[1u8]), Rp64_256::hash(&[2u8])];
-    c.bench_function("hash_rp64_256 (cached)", |bench| {
+    c.bench_function("hash_Rp64_256 (cached)", |bench| {
         bench.iter(|| Rp64_256::merge(black_box(&v)))
     });
 
-    c.bench_function("hash_rp64_256 (random)", |b| {
+    c.bench_function("hash_Rp64_256 (random)", |b| {
         b.iter_batched(
             || {
                 [
@@ -100,5 +103,25 @@ fn rescue256(c: &mut Criterion) {
     });
 }
 
-criterion_group!(hash_group, blake3, sha3, rescue248, rescue256);
+fn poseidon(c: &mut Criterion) {
+    let v: [PoseidonDigest; 2] = [PoseidonHash::hash(&[1u8]), PoseidonHash::hash(&[2u8])];
+    c.bench_function("hash_PoseidonHash (cached)", |bench| {
+        bench.iter(|| PoseidonHash::merge(black_box(&v)))
+    });
+
+    c.bench_function("hash_PoseidonHash (random)", |b| {
+        b.iter_batched(
+            || {
+                [
+                    PoseidonHash::hash(&rand_value::<u64>().to_le_bytes()),
+                    PoseidonHash::hash(&rand_value::<u64>().to_le_bytes()),
+                ]
+            },
+            |state| PoseidonHash::merge(&state),
+            BatchSize::SmallInput,
+        )
+    });
+}
+
+criterion_group!(hash_group, blake3, sha3, rescue248, rescue256,poseidon);
 criterion_main!(hash_group);
