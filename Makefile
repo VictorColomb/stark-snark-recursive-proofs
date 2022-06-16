@@ -1,4 +1,9 @@
 T=poseidon
+bls12-381 := 52435875175126190479447740508185965837690552500527637822603658699938581184513
+bn-128 := 21888242871839275222246405745257275088548364400416034343698204186575808495617
+dbg_p := 18446744073709551359
+
+
 
 .PHONY: all clean verify sym parameters
 
@@ -70,3 +75,12 @@ cat: public.json
 
 verify: verification_key.json public.json proof.json
 	snarkjs groth16 verify $^
+
+bn_constants:
+	python3 generate_parameters_grain.sage.py 1 0 254 5 8 60 ${bn-128} > param.circom
+
+bls_constants:
+	python3 generate_parametecircom_grain.sage.py 1 0 255 5 8 60 ${bls12-381} > param.circom
+
+dbg:
+	python3 generate_parameters_grain.sage.py 1 0 64 24 8 42 ${dbg_p} > param.txt
