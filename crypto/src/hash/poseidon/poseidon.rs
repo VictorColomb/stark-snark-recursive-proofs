@@ -5,7 +5,7 @@ use super::param::*;
 use math::{fields::f256::BaseElement, FieldElement};
 use std::vec::Vec;
 
-pub fn digest(input: &[u8]) -> ByteDigest<32> {
+pub(crate) fn digest(input: &[u8]) -> ByteDigest<32> {
     let mut formatted_input: Vec<BaseElement> = vec![];
 
     for chunk in input.chunks(32) {
@@ -19,7 +19,7 @@ pub fn digest(input: &[u8]) -> ByteDigest<32> {
     ByteDigest(hash(&mut output))
 }
 
-pub fn padder(input: &mut Vec<BaseElement>) {
+pub(crate) fn padder(input: &mut Vec<BaseElement>) {
     let l = input.len();
     let padded_length = (l / RATE + 1) * RATE;
 
@@ -29,7 +29,7 @@ pub fn padder(input: &mut Vec<BaseElement>) {
     }
 }
 
-pub fn hash(input: &mut Vec<BaseElement>) -> [u8; 32 * DIGEST_SIZE] {
+pub(crate) fn hash(input: &mut Vec<BaseElement>) -> [u8; 32 * DIGEST_SIZE] {
     let ref mut state = [BaseElement::ZERO; T].to_vec();
 
     for i in 0..input.len() / RATE {
@@ -48,7 +48,7 @@ pub fn hash(input: &mut Vec<BaseElement>) -> [u8; 32 * DIGEST_SIZE] {
     output
 }
 
-pub fn permutation(input: &mut Vec<BaseElement>) {
+pub(crate) fn permutation(input: &mut Vec<BaseElement>) {
     let ref mut state = input.clone()[..T].to_vec();
 
     for j in 0..R_F / 2 {
@@ -66,14 +66,14 @@ pub fn permutation(input: &mut Vec<BaseElement>) {
     input[..T].copy_from_slice(&state);
 }
 
-pub fn full_round(state: &mut Vec<BaseElement>, i: usize) {
+pub(crate) fn full_round(state: &mut Vec<BaseElement>, i: usize) {
     add_constants(state, i);
     apply_sbox(state);
     apply_mds(state);
     
 }
 
-pub fn partial_round(state: &mut Vec<BaseElement>, i: usize) {
+pub(crate) fn partial_round(state: &mut Vec<BaseElement>, i: usize) {
 
     if i == R_F / 2 {
         add_constants(state, i);
@@ -85,25 +85,25 @@ pub fn partial_round(state: &mut Vec<BaseElement>, i: usize) {
     state[0] = state[0].exp(ALPHA.into());
 
     if i < R_F / 2 + R_P - 1 {
-        add_constants(state, i + 1);
+        state[0] += ROUND_CONSTANTS_OPTI[i+1][0];
     }
 
     sparse_matrix(state,R_P-1-( i - R_F/ 2));
 }
 
-pub fn add_constants(state: &mut [BaseElement], round: usize) {
+pub(crate) fn add_constants(state: &mut [BaseElement], round: usize) {
     for i in 0..T {
         state[i] += ROUND_CONSTANTS_OPTI[round][i];
     }
 }
 
-pub fn apply_sbox<E: FieldElement>(state: &mut [E]) {
+pub(crate) fn apply_sbox<E: FieldElement>(state: &mut [E]) {
     for i in 0..T {
         state[i] = state[i].exp(ALPHA.into());
     }
 }
 
-pub fn matrix_mul<E: FieldElement + From<BaseElement>>(state: &mut [E],m: [[BaseElement; T]; T] ) {
+pub(crate) fn matrix_mul<E: FieldElement + From<BaseElement>>(state: &mut [E],m: [[BaseElement; T]; T] ) {
     let mut result = [E::ZERO; T];
     let mut temp = [E::ZERO; T];
     for i in 0..T {
@@ -118,7 +118,7 @@ pub fn matrix_mul<E: FieldElement + From<BaseElement>>(state: &mut [E],m: [[Base
     state.copy_from_slice(&result);
 }
 
-pub fn sparse_matrix(state: &mut [BaseElement],i: usize) {
+pub(crate) fn sparse_matrix(state: &mut [BaseElement],i: usize) {
     let _v = V_COLLECTION[i];
     let _w = W_HAT_COLLECTION[i];
     let s0 = state[0];
@@ -137,7 +137,7 @@ pub fn sparse_matrix(state: &mut [BaseElement],i: usize) {
     
 }
 
-pub fn apply_mds<E: FieldElement + From<BaseElement>>(state: &mut [E]) {
+pub(crate) fn apply_mds<E: FieldElement + From<BaseElement>>(state: &mut [E]) {
     let mut result = [E::ZERO; T];
     let mut temp = [E::ZERO; T];
     for i in 0..T {
