@@ -2,6 +2,7 @@ mod param;
 use core::marker::PhantomData;
 
 mod poseidon;
+mod poseidon_opti;
 
 #[cfg(test)]
 mod tests;
@@ -21,21 +22,21 @@ impl<B:StarkField> Hasher for Poseidon<B> {
 
     fn hash(bytes: &[u8]) -> Self::Digest {
         // return the first [RATE] elements of the state as hash result
-        poseidon::digest(bytes)
+        poseidon_opti::digest(bytes)
     }
 
     fn merge(values: &[Self::Digest; 2]) -> Self::Digest {
         let mut data = [0; 64];
         data[..32].copy_from_slice(values[0].0.as_slice());
         data[32..].copy_from_slice(values[1].0.as_slice());
-        poseidon::digest(&data)
+        poseidon_opti::digest(&data)
     }
 
     fn merge_with_int(seed: Self::Digest, value: u64) -> Self::Digest {
         let mut data = [0; 40];
         data[..32].copy_from_slice(&seed.0);
         data[32..].copy_from_slice(&value.to_le_bytes());
-        poseidon::digest(&data)
+        poseidon_opti::digest(&data)
     }
 }
 
@@ -46,6 +47,6 @@ impl<B: StarkField> ElementHasher for Poseidon<B> {
         assert!(B::IS_CANONICAL);
 
         let bytes = E::elements_as_bytes(elements);
-        poseidon::digest(bytes)
+        poseidon_opti::digest(bytes)
     }
 }

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::hash::ByteDigest;
 
 //padding with 0s and a single one
@@ -27,13 +28,12 @@ pub fn padder(input: &mut Vec<BaseElement>){
     let l = input.len();
     let padded_length = (l/RATE +1) * RATE;
 
-    if l != padded_length {
-        input.push(BaseElement::ONE);
+    input.push(BaseElement::ONE);
 
-        for _i in l + 1..padded_length {
-            input.push(BaseElement::ZERO)
-        }
+    for _i in l + 1..padded_length {
+        input.push(BaseElement::ZERO)
     }
+
 }
 
 pub fn hash(input: &mut Vec<BaseElement>) -> [u8; 32 * DIGEST_SIZE] {
@@ -64,7 +64,7 @@ pub fn permutation(input: &mut Vec<BaseElement>) {
     for j in 0..R_F / 2 {
         full_round(state, j);
     }
-
+    
     for j in 0..R_P {
         partial_round(state, j + R_F / 2);
     }

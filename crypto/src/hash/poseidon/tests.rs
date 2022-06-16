@@ -1,6 +1,10 @@
+use crate::hash::poseidon::poseidon_opti::matrix_mul;
+
 use super::poseidon;
 
 use super::param::*;
+use super::poseidon::padder;
+use super::poseidon_opti;
 use math::fields::f256::{BaseElement, U256};
 use math::FieldElement;
 use rand_utils::rand_array;
@@ -56,6 +60,8 @@ fn test_permutation() {
         BaseElement::from(0u8),
         BaseElement::from(1u8),
         BaseElement::from(2u8),
+        BaseElement::from(3u8),
+        BaseElement::from(4u8),
     ]
     .to_vec();
 
@@ -77,6 +83,63 @@ fn test_permutation() {
     assert_eq!(state, expected);
 }
 
+
+#[test]
+fn test_padder() {
+    let ref mut state = [
+        BaseElement::from(0u8),
+        BaseElement::from(1u8),
+        BaseElement::from(2u8),
+        BaseElement::from(2u8),
+    ]
+    .to_vec();
+
+    padder(state);
+    println!("{:?}", state)
+
+}
+#[test]
+fn test_mul_matrix() {
+    let mut state = [
+        BaseElement::from(0u8),
+        BaseElement::from(1u8),
+        BaseElement::from(2u8),
+        BaseElement::from(3u8),
+        BaseElement::from(4u8),
+        BaseElement::from(5u8),
+        BaseElement::from(6u8),
+        BaseElement::from(7u8),
+        BaseElement::from(8u8),
+        BaseElement::from(9u8),
+        BaseElement::from(10u8),
+        BaseElement::from(11u8),
+        BaseElement::from(12u8),
+        BaseElement::from(13u8),
+        BaseElement::from(14u8),
+        BaseElement::from(15u8),
+        BaseElement::from(16u8),
+        BaseElement::from(17u8),
+        BaseElement::from(18u8),
+        BaseElement::from(19u8),
+        BaseElement::from(20u8),
+        BaseElement::from(21u8),
+        BaseElement::from(22u8),
+        BaseElement::from(23u8),
+        ]
+    .to_vec();
+
+    let mut mat = [[BaseElement::from(1u8);T]; T];
+    for i in 0..24 {
+        mat[i][1] = BaseElement::from(1 as u32);
+    }
+    matrix_mul(&mut state, mat);
+
+
+}
+
+
+
+
 #[test]
 fn test_hash() {
     let mut state = [
@@ -86,9 +149,48 @@ fn test_hash() {
     ]
     .to_vec();
 
-    poseidon::hash(&mut state);
+    padder(&mut state);
+
+    let output = poseidon::hash(&mut state);
 
     // expected values are obtained by executing sage reference implementation code
 
-    println!("Hash state = {:?}", state)
+    println!("Hash state = {:?}", output)
 }
+
+
+#[test]
+fn test_perm_opti() {
+    let mut state = [
+        BaseElement::from(0u8),
+        BaseElement::from(1u8),
+        BaseElement::from(2u8),
+        BaseElement::from(3u8),
+        BaseElement::from(4u8),
+
+        ]
+    .to_vec();
+
+    let mut state2 = state.clone();
+
+    poseidon::permutation(&mut state);
+
+    poseidon_opti::permutation(&mut state2);
+    
+    assert_eq!(state2,state);
+}
+
+#[test]
+fn test_hash_opti() {
+    let mut state = [
+        BaseElement::from(0u8),
+        BaseElement::from(1u8),
+        BaseElement::from(2u8),
+        BaseElement::from(2u8),
+        BaseElement::from(2u8),
+    ]
+    .to_vec();
+
+    assert_eq!(poseidon::hash(&mut state),poseidon_opti::hash(&mut state));
+}
+

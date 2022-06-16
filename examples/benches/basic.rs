@@ -11,9 +11,9 @@ fn basic(c: &mut Criterion) {
     group.measurement_time(Duration::from_secs(30));
 
 
-/*     group.bench_function("generate_proof", |bench| {
+    group.bench_function("generate_proof", |bench| {
         bench.iter(|| generate_proof());
-    }); */
+    });
 
     let (result, proof) = generate_proof();
     

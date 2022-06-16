@@ -428,7 +428,6 @@ fn mul(a: U256, b: U256) -> U256 {
 /// Computes y such that (x * y) % m = 1 except for when x = 0. In that case,
 /// 0 is returned. x is assumed to be a valid field element.
 fn inv(x: U256) -> U256 {
-    dbg!(x);
     xgcd(x, M).0 % M
 }
 

@@ -519,8 +519,8 @@ def print_matrix(name:str,M):
 
 
 def print_round_constants(round_constants, n, field):
-    print("pub const ROUND_CONSTANTS: [BaseElement;", len(round_constants), "] =", str(
-        [to_u256(entry) for entry in round_constants]).replace("'", ""), ";\n")
+    print("pub const ROUND_CONSTANTS: [[BaseElement;", NUM_CELLS, "];", len(round_constants) // NUM_CELLS,"]=", str(
+        [[to_u256(entry) for entry in round_constants[i:i+NUM_CELLS] ] for i in range(0,len(round_constants),NUM_CELLS)]).replace("'", ""), ";\n")
 
 
 
@@ -545,5 +545,6 @@ print("pub const RATE : usize = ", NUM_CELLS - C, ";\n")
 print("pub const DIGEST_SIZE : usize = ", 1, ";\n")
 print("pub const ALPHA : u32 = ", 5, ";\n")
 print_linear_layer(linear_layer, FIELD_SIZE, NUM_CELLS)
-print_matrix("ROUND_CONSTANTS",rc)
+print_matrix("ROUND_CONSTANTS_OPTI",rc)
+print_round_constants(round_constants, NUM_CELLS, FIELD)
 
