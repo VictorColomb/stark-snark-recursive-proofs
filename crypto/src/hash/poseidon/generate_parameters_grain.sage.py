@@ -546,5 +546,4 @@ print("pub const DIGEST_SIZE : usize = ", 1, ";\n")
 print("pub const ALPHA : u32 = ", 5, ";\n")
 print_linear_layer(linear_layer, FIELD_SIZE, NUM_CELLS)
 print_matrix("ROUND_CONSTANTS_OPTI",rc)
-print_round_constants(round_constants, NUM_CELLS, FIELD)
 

@@ -1,10 +1,5 @@
-use crate::hash::poseidon::poseidon_opti::matrix_mul;
-
-use super::poseidon;
-
 use super::param::*;
-use super::poseidon::padder;
-use super::poseidon_opti;
+use super::poseidon;
 use math::fields::f256::{BaseElement, U256};
 use math::FieldElement;
 use rand_utils::rand_array;
@@ -24,173 +19,109 @@ fn test_sbox() {
 
 #[test]
 fn test_mds() {
-    let mut state = [
-        BaseElement::from(0u8),
-        BaseElement::from(2u8),
-        BaseElement::from(0u8),
-    ]
-    .to_vec();
+    let mut state = element_vec(T, &|i| i);
 
     poseidon::apply_mds(&mut state);
 
     // expected values are obtained by executing sage reference implementation code
 
-    println!("Permuted state = {:?}", state)
+    let expected = [
+        BaseElement(U256::from(
+            "0xf47a5b360b59a13893b68e1e358334e084358abf3aaa900833200a2c6d1d52d",
+        )),
+        BaseElement(U256::from(
+            "0x19d0095e2c71ff7b76f932791481c7d71ef535a8ed962b52c7648d8171253db8",
+        )),
+        BaseElement(U256::from(
+            "0x3213e05466d7d030b09f48ef6964560bda50374ac5457abac46b3423e3a1e571",
+        )),
+        BaseElement(U256::from(
+            "0x3c962d6b4732a622c8fab64d4b246e851cf3521329c157b99d44bc416fd63f1b",
+        )),
+        BaseElement(U256::from(
+            "0x5e5b33996c55d24b440db9eeae3ec2ca620f0a4774f0091fc5014d7b8ee26a82",
+        )),
+    ];
+    assert_eq!(state, expected)
 }
 
 #[test]
 fn test_constants() {
-    let mut state = [
-        BaseElement::from(0u8),
-        BaseElement::from(1u8),
-        BaseElement::from(2u8),
-    ]
-    .to_vec();
+    let mut state = element_vec(T, &|i| i);
 
     poseidon::add_constants(&mut state, 0);
 
     // expected values are obtained by executing sage reference implementation code
+    let expected = [
+        BaseElement(U256::from(
+            "0x5ee52b2f39e240a4006e97a15a7609dce42fa9aa510d11586a56db98fa925158",
+        )),
+        BaseElement(U256::from(
+            "0x3e92829ce321755f769c6fd0d51e98262d7747ad553b028dbbe98b5274b9c8e2",
+        )),
+        BaseElement(U256::from(
+            "0x7067b2b9b65af0519cef530217d4563543852399c2af1557fcd9eb325b5365e6",
+        )),
+        BaseElement(U256::from(
+            "0x725e66aa00e406f247f00002487d092328c526f2f5a3c456004a71cea83845d8",
+        )),
+        BaseElement(U256::from(
+            "0x72bf92303a9d433709d29979a296d98f147e8e7b8ed0cb452bd9f9508f6e4715",
+        )),
+    ];
 
-    println!("Permuted state = {:?}", state)
+    assert_eq!(state, expected);
 }
 
 #[test]
 fn test_permutation() {
-    let mut state = [
-        BaseElement::from(0u8),
-        BaseElement::from(1u8),
-        BaseElement::from(2u8),
-        BaseElement::from(3u8),
-        BaseElement::from(4u8),
-    ]
-    .to_vec();
-
-    let expected = [
-        BaseElement(U256::from(
-            "0x28ce19420fc246a05553ad1e8c98f5c9d67166be2c18e9e4cb4b4e317dd2a78a",
-        )),
-        BaseElement(U256::from(
-            "0x51f3e312c95343a896cfd8945ea82ba956c1118ce9b9859b6ea56637b4b1ddc4",
-        )),
-        BaseElement(U256::from(
-            "0x3b2b69139b235626a0bfb56c9527ae66a7bf486ad8c11c14d1da0c69bbe0f79a",
-        )),
-    ];
-
-    poseidon::permutation(&mut state);
+    let mut state = element_vec(T, &|i| i);
 
     // expected values are obtained by executing sage reference implementation code
+    let expected = [
+        BaseElement(U256::from(
+            "0x2a918b9c9f9bd7bb509331c81e297b5707f6fc7393dcee1b13901a0b22202e18",
+        )),
+        BaseElement(U256::from(
+            "0x65ebf8671739eeb11fb217f2d5c5bf4a0c3f210e3f3cd3b08b5db75675d797f7",
+        )),
+        BaseElement(U256::from(
+            "0x2cc176fc26bc70737a696a9dfd1b636ce360ee76926d182390cdb7459cf585ce",
+        )),
+        BaseElement(U256::from(
+            "0x4dc4e29d283afd2a491fe6aef122b9a968e74eff05341f3cc23fda1781dcb566",
+        )),
+        BaseElement(U256::from(
+            "0x3ff622da276830b9451b88b85e6184fd6ae15c8ab3ee25a5667be8592cce3b1",
+        )),
+    ];
+    poseidon::permutation(&mut state);
+    dbg!(&state);
     assert_eq!(state, expected);
 }
 
-
-#[test]
-fn test_padder() {
-    let ref mut state = [
-        BaseElement::from(0u8),
-        BaseElement::from(1u8),
-        BaseElement::from(2u8),
-        BaseElement::from(2u8),
-    ]
-    .to_vec();
-
-    padder(state);
-    println!("{:?}", state)
-
-}
-#[test]
-fn test_mul_matrix() {
-    let mut state = [
-        BaseElement::from(0u8),
-        BaseElement::from(1u8),
-        BaseElement::from(2u8),
-        BaseElement::from(3u8),
-        BaseElement::from(4u8),
-        BaseElement::from(5u8),
-        BaseElement::from(6u8),
-        BaseElement::from(7u8),
-        BaseElement::from(8u8),
-        BaseElement::from(9u8),
-        BaseElement::from(10u8),
-        BaseElement::from(11u8),
-        BaseElement::from(12u8),
-        BaseElement::from(13u8),
-        BaseElement::from(14u8),
-        BaseElement::from(15u8),
-        BaseElement::from(16u8),
-        BaseElement::from(17u8),
-        BaseElement::from(18u8),
-        BaseElement::from(19u8),
-        BaseElement::from(20u8),
-        BaseElement::from(21u8),
-        BaseElement::from(22u8),
-        BaseElement::from(23u8),
-        ]
-    .to_vec();
-
-    let mut mat = [[BaseElement::from(1u8);T]; T];
-    for i in 0..24 {
-        mat[i][1] = BaseElement::from(1 as u32);
-    }
-    matrix_mul(&mut state, mat);
-
-
-}
-
-
-
-
 #[test]
 fn test_hash() {
-    let mut state = [
-        BaseElement::from(0u8),
-        BaseElement::from(1u8),
-        BaseElement::from(2u8),
-    ]
-    .to_vec();
+    let mut state = element_vec(T, &|i| i);
 
-    padder(&mut state);
+    poseidon::padder(&mut state);
 
     let output = poseidon::hash(&mut state);
 
     // expected values are obtained by executing sage reference implementation code
-
-    println!("Hash state = {:?}", output)
+    let expected: [u8; 32] = [
+        9, 86, 3, 12, 160, 105, 236, 249, 54, 3, 34, 207, 252, 122, 39, 91, 21, 156, 202, 4, 107,
+        88, 95, 45, 61, 24, 40, 254, 16, 78, 58, 42,
+    ];
+    assert_eq!(expected, output);
 }
 
+//HELPER FUNCTION
 
-#[test]
-fn test_perm_opti() {
-    let mut state = [
-        BaseElement::from(0u8),
-        BaseElement::from(1u8),
-        BaseElement::from(2u8),
-        BaseElement::from(3u8),
-        BaseElement::from(4u8),
-
-        ]
-    .to_vec();
-
-    let mut state2 = state.clone();
-
-    poseidon::permutation(&mut state);
-
-    poseidon_opti::permutation(&mut state2);
-    
-    assert_eq!(state2,state);
+fn element_vec(n: usize, f: &dyn Fn(usize) -> usize) -> Vec<BaseElement> {
+    let mut vec = vec![];
+    for i in 0usize..n {
+        vec.push(BaseElement::from(f(i) as u128));
+    }
+    return vec;
 }
-
-#[test]
-fn test_hash_opti() {
-    let mut state = [
-        BaseElement::from(0u8),
-        BaseElement::from(1u8),
-        BaseElement::from(2u8),
-        BaseElement::from(2u8),
-        BaseElement::from(2u8),
-    ]
-    .to_vec();
-
-    assert_eq!(poseidon::hash(&mut state),poseidon_opti::hash(&mut state));
-}
-
