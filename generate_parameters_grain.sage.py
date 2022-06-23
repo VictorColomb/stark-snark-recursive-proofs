@@ -477,18 +477,17 @@ def calc_equivalent_constants(constants,MDS):
 ########### formatting to .rs file helper functions ##########
 
 def print_linear_layer(M, n, t):
-    print("function T() {", t, ";}\n")
-    print("function R_F() {", R_F_FIXED, ";}\n")
-    print("function R_P() {", R_P_FIXED, ";}\n")
+    print("function T() {\nreturn", t, ";}\n")
+    print("function R_F() {\nreturn", R_F_FIXED, ";}\n")
+    print("function R_P() {\nreturn", R_P_FIXED, ";}\n")
     if not algorithm_1(M, NUM_CELLS) and algorithm_2(M, NUM_CELLS) and algorithm_3(M, NUM_CELLS):
         print("Unsafe MDS")
         exit()
-    print_matrix("MDS",M)
+    print_matrix("POSEIDON_M",M)
     eq_mat = calc_equivalent_matrices(M)
-    print_matrix("MP",eq_mat[0])
-    print_matrix("V_COLLECTION",eq_mat[1])
-    print_matrix("W_HAT_COLLECTION",eq_mat[2])
-    print("function M_0_0() {",to_u256(eq_mat[3]),";}\n")
+    print_matrix("POSEIDON_P",transpose(eq_mat[0]))
+    a = [[eq_mat[3]] + e + f for (e,f) in zip(eq_mat[2],eq_mat[1])]
+    print_vector("POSEIDON_S", flatten(a))
     
 
 
@@ -503,10 +502,10 @@ def print_matrix(name:str,M):
     matrix_string = "["
     for i in range(_sage_const_0, t):
         if FIELD == _sage_const_0:
-            matrix_string += str([to_u256(entry)
+            matrix_string += str([entry
                                  for entry in M[i]]).replace("'", "")
         elif FIELD == _sage_const_1:
-            matrix_string += str([to_u256(entry)
+            matrix_string += str([entry
                                  for entry in M[i]]).replace("'", "")
         if i < (t-_sage_const_1):
             matrix_string += ","
@@ -514,15 +513,10 @@ def print_matrix(name:str,M):
             matrix_string += "]"
     matrix_string = matrix_string
     matrix_string = matrix_string
-    print("function ",(str(name) + "()").replace(" ","")," {", matrix_string, ";}\n")
+    print("function ",(str(name) + "(t)").replace(" ","")," {\n return ", matrix_string, ";\n}\n")
 
-
-def print_round_constants(round_constants, n, field):
-    print("function rc() {", str(
-        [[to_u256(entry) for entry in round_constants[i:i+NUM_CELLS] ] for i in range(0,len(round_constants),NUM_CELLS)]).replace("'", ""), ";\n}\n")
-
-
-
+def print_vector(name:str,M):
+    print("function ",(str(name) + "(t)").replace(" ","")," {\n return ", [m for m in M], ";\n}\n")
 
 ############## MAIN ##############
 
@@ -540,8 +534,6 @@ linear_layer = generate_matrix(FIELD, FIELD_SIZE, NUM_CELLS)
 
 rc = calc_equivalent_constants(round_constants,linear_layer)
 
-print("function RATE() {", NUM_CELLS - C, ";}\n")
-print("function ALPHA() {", 5, ";}\n")
 print_linear_layer(linear_layer, FIELD_SIZE, NUM_CELLS)
-print_matrix("ROUND_CONSTANTS_OPTI",rc)
+print_vector("POSEIDON_C",[x for x in flatten(rc) if x!=0])
 

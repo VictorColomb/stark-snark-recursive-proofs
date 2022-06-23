@@ -22,16 +22,12 @@ clean:
 sym: $T.sym
 
 
-### compute parameters
-parameters.circom: compute_parameters.sage
-	sage compute_parameters.sage 1 0 254 3 8 57 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001 parameters.circom
-	rm -f compute_parameters.sage.py
-
 
 ### circom compile
+compile: $T_cpp
 
-$T_cpp: $T.circom parameters.circom
-	circom $< --c --r1cs --sym
+$T_cpp: $T.circom
+	circom -p bls12381 $< --c --r1cs --sym
 
 $T.sym: $T_cpp
 
@@ -80,7 +76,7 @@ bn_constants:
 	python3 generate_parameters_grain.sage.py 1 0 254 5 8 60 ${bn-128} > param.circom
 
 bls_constants:
-	python3 generate_parametecircom_grain.sage.py 1 0 255 5 8 60 ${bls12-381} > param.circom
+	python3 generate_parameters_grain.sage.py 1 0 255 5 8 60 ${bls12-381} > param.circom
 
 dbg:
-	python3 generate_parameters_grain.sage.py 1 0 64 24 8 42 ${dbg_p} > param.txt
+	python3 generate_parameters_grain.sage.py 1 0 64 24 8 42 ${dbg_p} > dbg_param.circom
