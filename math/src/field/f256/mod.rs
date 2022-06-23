@@ -44,7 +44,7 @@ const G: U256 = U256([
 ]);
 
 // Number of bytes needed to represent field element
-const ELEMENT_BYTES: usize = core::mem::size_of::<U256>();
+const ELEMENT_BYTES: usize = mem::size_of::<U256>();
 
 // FIELD ELEMENT
 // ================================================================================================
@@ -385,7 +385,7 @@ impl Deserializable for BaseElement {
     }
 }
 
-impl BaseElement{
+impl BaseElement {
     pub fn to_le_bytes(&self) -> [u8; 32] {
         let mut bytes = [0u8; 32];
         self.0.to_little_endian(&mut bytes);
@@ -445,13 +445,17 @@ pub fn xgcd(a: U256, b: U256) -> (U256, U256) {
 
     while r1 != U256::zero() {
         let q = r0 / r1;
-        r0 = if r0 > q * r1 {r0 - q*r1} else {q*r1 - r0};
+        r0 = if r0 > q * r1 {
+            r0 - q * r1
+        } else {
+            q * r1 - r0
+        };
         mem::swap(&mut r0, &mut r1);
 
-        s0 = s0 + q*s1;
+        s0 = s0 + q * s1;
         mem::swap(&mut s0, &mut s1);
 
-        t0 = t0 + q*t1;
+        t0 = t0 + q * t1;
         mem::swap(&mut t0, &mut t1);
 
         n += 1;

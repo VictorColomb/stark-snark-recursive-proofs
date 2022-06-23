@@ -54,7 +54,7 @@ pub(crate) fn permutation(input: &mut Vec<BaseElement>) {
     for j in 0..R_F / 2 {
         full_round(state, j);
     }
-    
+
     for j in 0..R_P {
         partial_round(state, j + R_F / 2);
     }
@@ -70,16 +70,12 @@ pub(crate) fn full_round(state: &mut Vec<BaseElement>, i: usize) {
     add_constants(state, i);
     apply_sbox(state);
     apply_mds(state);
-    
 }
 
 pub(crate) fn partial_round(state: &mut Vec<BaseElement>, i: usize) {
-
     if i == R_F / 2 {
         add_constants(state, i);
-        matrix_mul(state,MP);
-
-    } else {
+        matrix_mul(state, MP);
     }
 
     state[0] = state[0].exp(ALPHA.into());
@@ -88,7 +84,7 @@ pub(crate) fn partial_round(state: &mut Vec<BaseElement>, i: usize) {
         state[0] += ROUND_CONSTANTS_OPTI[i+1][0];
     }
 
-    sparse_matrix(state,R_P-1-( i - R_F/ 2));
+    sparse_matrix(state, R_P - 1 - (i - R_F / 2));
 }
 
 pub(crate) fn add_constants(state: &mut [BaseElement], round: usize) {
@@ -110,7 +106,7 @@ pub(crate) fn matrix_mul<E: FieldElement + From<BaseElement>>(state: &mut [E],m:
         for j in 0..T {
             temp[j] = E::from(m[j][i]) * state[j];
         }
-        
+
         for j in 0..T {
             result[i] += temp[j];
         }
@@ -122,19 +118,16 @@ pub(crate) fn sparse_matrix(state: &mut [BaseElement],i: usize) {
     let _v = V_COLLECTION[i];
     let _w = W_HAT_COLLECTION[i];
     let s0 = state[0];
-    
+
     state[0] *= M_0_0;
-    
+
     for j in 1..T {
-        state[0] += W_HAT_COLLECTION[i][j-1] * state[j];
+        state[0] += W_HAT_COLLECTION[i][j - 1] * state[j];
     }
 
     for j in 1..T {
-        state[j] += s0 * V_COLLECTION[i][j-1];
+        state[j] += s0 * V_COLLECTION[i][j - 1];
     }
-    
-    
-    
 }
 
 pub(crate) fn apply_mds<E: FieldElement + From<BaseElement>>(state: &mut [E]) {
@@ -151,4 +144,3 @@ pub(crate) fn apply_mds<E: FieldElement + From<BaseElement>>(state: &mut [E]) {
     }
     state.copy_from_slice(&result);
 }
-

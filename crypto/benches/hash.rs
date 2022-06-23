@@ -7,7 +7,7 @@ use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion
 use math::fields::f128;
 use rand_utils::rand_value;
 use winter_crypto::{
-    hashers::{Blake3_256, Rp62_248, Rp64_256, Sha3_256,Poseidon},
+    hashers::{Blake3_256, Poseidon, Rp62_248, Rp64_256, Sha3_256},
     Hasher,
 };
 
@@ -105,11 +105,11 @@ fn rescue256(c: &mut Criterion) {
 
 fn poseidon(c: &mut Criterion) {
     let v: [PoseidonDigest; 2] = [PoseidonHash::hash(&[1u8]), PoseidonHash::hash(&[2u8])];
-    c.bench_function("hash_PoseidonHash (cached)", |bench| {
+    c.bench_function("hash_Poseidon (cached)", |bench| {
         bench.iter(|| PoseidonHash::merge(black_box(&v)))
     });
 
-    c.bench_function("hash_PoseidonHash (random)", |b| {
+    c.bench_function("hash_Poseidon (random)", |b| {
         b.iter_batched(
             || {
                 [
@@ -123,5 +123,5 @@ fn poseidon(c: &mut Criterion) {
     });
 }
 
-criterion_group!(hash_group, blake3, sha3, rescue248, rescue256,poseidon);
+criterion_group!(hash_group, blake3, sha3, rescue248, rescue256, poseidon);
 criterion_main!(hash_group);

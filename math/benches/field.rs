@@ -12,7 +12,7 @@ use rand_utils::{rand_array, rand_value, rand_vector};
 use std::time::Duration;
 use winter_math::{
     batch_inversion,
-    fields::{f128, f62, f64},
+    fields::{f256, f128, f62, f64},
     fields::{CubeExtension, QuadExtension},
     ExtensibleField, FieldElement, StarkField,
 };
@@ -266,6 +266,7 @@ fn bench_field_ops(c: &mut Criterion) {
     field_ops::<f62::BaseElement>(c, "f62");
     field_ops::<f64::BaseElement>(c, "f64");
     field_ops::<f128::BaseElement>(c, "f128");
+    field_ops::<f256::BaseElement>(c, "f256");
 }
 
 // CRITERION BOILERPLATE
