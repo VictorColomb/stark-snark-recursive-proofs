@@ -8,8 +8,7 @@ members = [
   "air",
   "prover",
   "verifier",
-  "winterfell",
-  "examples"
+  "winterfell"
 ]
 
 
