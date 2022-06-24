@@ -3,9 +3,12 @@
 // This source code is licensed under the MIT license found in the
 // LICENSE file in the root directory of this source tree.
 
+use std::collections::HashSet;
+
 use super::*;
 use math::fields::f128::BaseElement;
 use proptest::prelude::*;
+use rand_utils::rand_array;
 
 type Digest256 = crate::hash::ByteDigest<32>;
 type Blake3_256 = crate::hash::Blake3_256<BaseElement>;
@@ -230,6 +233,31 @@ fn verify_batch() {
 
     let proof = tree.prove_batch(&[0, 1, 2, 3, 4, 5, 6, 7]).unwrap();
     assert!(MerkleTree::verify_batch(tree.root(), &[0, 1, 2, 3, 4, 5, 6, 7], &proof).is_ok());
+}
+
+#[test]
+fn to_paths() {
+    let leaves = Digest256::bytes_as_digests(&LEAVES8).to_vec();
+    let depth = log2(leaves.len()) as usize;
+    let tree = MerkleTree::<Blake3_256>::new(leaves).unwrap();
+
+    // generate a list of random unique indexes
+    let indexes: Vec<usize> = rand_array::<u64, 7>().map(|e| (e % 8) as usize).to_vec();
+    let indexes = indexes
+        .iter()
+        .cloned()
+        .collect::<HashSet<_>>()
+        .drain()
+        .collect::<Vec<_>>();
+
+    let proof = tree.prove_batch(&indexes).unwrap();
+    let paths = proof.to_paths(&indexes).unwrap();
+
+    assert_eq!(paths.len(), indexes.len());
+    assert_eq!(paths[0].len(), depth + 1);
+    for (i, path) in paths.iter().enumerate() {
+        assert_eq!(*path, tree.prove(indexes[i]).unwrap());
+    }
 }
 
 proptest! {

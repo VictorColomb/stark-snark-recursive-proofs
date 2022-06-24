@@ -5,7 +5,7 @@
 
 use crate::{errors::MerkleTreeError, Hasher};
 use utils::{
-    collections::{BTreeMap, Vec},
+    collections::{BTreeMap, BTreeSet, Vec},
     string::ToString,
     ByteReader, Deserializable, DeserializationError, Serializable,
 };
@@ -253,6 +253,122 @@ impl<H: Hasher> BatchMerkleProof<H> {
             }
         }
         v.remove(&1).ok_or(MerkleTreeError::InvalidProof)
+    }
+
+    pub fn to_paths(&self, indexes: &[usize]) -> Result<Vec<Vec<H::Digest>>, MerkleTreeError>
+    where
+        H: Hasher,
+    {
+        if indexes.is_empty() {
+            return Err(MerkleTreeError::TooFewLeafIndexes);
+        }
+        if indexes.len() > MAX_PATHS {
+            return Err(MerkleTreeError::TooManyLeafIndexes(
+                MAX_PATHS,
+                indexes.len(),
+            ));
+        }
+
+        // create un-initialized array to hold all intermediate nodes
+        let n = 2usize.pow(self.depth as u32);
+        let mut leaves = unsafe { utils::uninit_vector::<H::Digest>(n) };
+        let mut nodes = unsafe { utils::uninit_vector::<H::Digest>(n) };
+        nodes[0] = H::Digest::default();
+
+        // reinterpret leaves and nodes as an array of two leaves fused together
+        let two_leaves =
+            unsafe { std::slice::from_raw_parts(leaves.as_ptr() as *const [H::Digest; 2], n >> 1) };
+        let two_nodes =
+            unsafe { std::slice::from_raw_parts(nodes.as_ptr() as *const [H::Digest; 2], n >> 1) };
+
+        // sort indexes in ascending order
+        let original_indexes = indexes;
+        let index_map = super::map_indexes(indexes, self.depth.into())?;
+        let indexes = index_map.keys().cloned().collect::<Vec<_>>();
+
+        // populate the leaves and the first layer of nodes
+        let mut i = 0;
+        let mut j = 0;
+        let mut nodes_indexes: Vec<usize> = Vec::with_capacity(indexes.len());
+        let mut next_index_map = BTreeSet::new();
+        while i < indexes.len() {
+            let index = indexes[i];
+            leaves[index] = if let Some(idx) = index_map.get(&index) {
+                self.leaves[*idx]
+            } else {
+                return Err(MerkleTreeError::InvalidProof);
+            };
+            if indexes.len() > i + 1 && are_siblings(index, indexes[i + 1]) {
+                leaves[indexes[i + 1]] = if let Some(idx) = index_map.get(&indexes[i + 1]) {
+                    self.leaves[*idx]
+                } else {
+                    return Err(MerkleTreeError::InvalidProof);
+                };
+                nodes_indexes.push(0);
+                i += 1;
+            } else {
+                leaves[index ^ 1] = self.nodes[j][0];
+                nodes_indexes.push(1);
+            }
+            nodes[(index + n) >> 1] = H::merge(&two_leaves[index >> 1]);
+            next_index_map.insert((index + n) >> 1);
+            i += 1;
+            j += 1;
+        }
+
+        // populate the remaining layers of nodes. after this loop,
+        // the leaves and the nodes will contain all the required nodes
+        // to build the required authentication paths
+        for _ in 1..self.depth {
+            let indexes = next_index_map.iter().cloned().collect::<Vec<_>>();
+            next_index_map.clear();
+
+            let mut i = 0;
+            while i < indexes.len() {
+                let index = indexes[i];
+                if indexes.len() > i + 1 && are_siblings(index, indexes[i + 1]) {
+                    i += 1;
+                } else {
+                    nodes[index ^ 1] = self.nodes[i][nodes_indexes[i]];
+                }
+                let index = index >> 1;
+                nodes[index] = H::merge(&&two_nodes[index]);
+                next_index_map.insert(index);
+                i += 1;
+            }
+        }
+
+        // the only remaining node should be the root
+        if next_index_map.len() > 1 || !next_index_map.contains(&1) {
+            return Err(MerkleTreeError::InvalidProof);
+        }
+
+        // build and return authentication paths
+        original_indexes
+            .iter()
+            .cloned()
+            .map(|mut index| {
+                let mut path: Vec<H::Digest> = Vec::with_capacity(self.depth as usize + 1);
+
+                // add leaves
+                path.push(leaves[index]);
+                path.push(leaves[index ^ 1]);
+                index = (index + n) >> 1;
+
+                // add nodes
+                for _ in 1..self.depth {
+                    path.push(nodes[index ^ 1]);
+                    index >>= 1;
+                }
+
+                if index != 1 {
+                    // index must be root
+                    return Err(MerkleTreeError::InvalidProof);
+                }
+
+                Ok(path)
+            })
+            .collect::<Result<Vec<Vec<_>>, MerkleTreeError>>()
     }
 
     // SERIALIZATION / DESERIALIZATION
