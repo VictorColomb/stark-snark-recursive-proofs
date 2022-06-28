@@ -5,12 +5,13 @@ use winter_circom_prover::proof_to_json;
 use winter_crypto::hashers::Poseidon;
 use winter_math::{fields::f256::BaseElement, FieldElement};
 use winter_prover::{FieldExtension, HashFunction, ProofOptions, Prover};
+use serde_json::json;
 
 mod prover;
 use prover::WorkProver;
 
 mod air;
-use air::{PublicInputs, WorkAir};
+use air::WorkAir;
 
 fn main() {
     // PROOF
@@ -34,37 +35,40 @@ fn main() {
     // build proof
     let prover = WorkProver::new(options);
     let trace = prover.build_trace(start, n);
-    let result = trace.get(1, n - 1);
+    let public_inputs = prover.get_pub_inputs(&trace);
     let (proof, query_positions) = prover.prove(trace).unwrap();
 
     // BUILD JSON OUTPUTS
     // ===========================================================================
 
     // retrieve air and proof options
-    let public_inputs = PublicInputs {
-        start: BaseElement::ONE,
-        result,
-    };
     let air = WorkAir::new(
         proof.get_trace_info(),
-        public_inputs,
+        public_inputs.clone(),
         proof.options().clone(),
     );
 
     let mut fri_num_queries = Vec::new();
     let mut fri_tree_depths = Vec::new();
-    let json = proof_to_json::<WorkAir, Poseidon<BaseElement>>(
+    let mut json = proof_to_json::<WorkAir, Poseidon<BaseElement>>(
         proof,
         &air,
         &query_positions,
         &mut fri_num_queries,
-        &mut fri_tree_depths
+        &mut fri_tree_depths,
     );
-    let json_string = format!("{}", json);
+
+    // record public inputs
+    // TODO: move to [proof_to_json]
+    json["public_inputs"] = json!([
+        public_inputs.start,
+        public_inputs.result
+    ]);
 
     // PRINT TO FILE
     // ===========================================================================
 
+    let json_string = format!("{}", json);
     let mut file = File::create("proof.json").unwrap();
     file.write(&json_string.into_bytes()).unwrap();
 

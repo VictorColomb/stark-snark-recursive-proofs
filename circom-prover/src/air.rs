@@ -6,6 +6,7 @@ use winter_math::{fields::f256::BaseElement, FieldElement};
 use winter_prover::ByteWriter;
 use winter_utils::Serializable;
 
+#[derive(Clone)]
 pub struct PublicInputs {
     pub start: BaseElement,
     pub result: BaseElement,

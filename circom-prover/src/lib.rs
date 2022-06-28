@@ -5,4 +5,6 @@ pub use json::proof_to_json;
 
 // TODO: print parameters to file/console
 
-// TODO: get ce_blowup_factor
+// TODO: convert assertions to Circom template
+
+// TODO: convert transition constraints to Circom template

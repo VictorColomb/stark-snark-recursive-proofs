@@ -51,7 +51,7 @@ where
     H: ElementHasher<BaseField = BaseElement>,
 {
     let StarkProof {
-        context: _,
+        context,
         commitments,
         mut trace_queries,
         constraint_queries,
@@ -239,5 +239,6 @@ where
         "trace_commitment": trace_commitment,
         "trace_evaluations": trace_evaluations,
         "trace_query_proofs": trace_query_proofs,
+        "trace_length": context.trace_length(),
     })
 }
