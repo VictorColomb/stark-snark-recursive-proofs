@@ -13,6 +13,7 @@ use core::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     slice,
 };
+use serde::{Serialize, Serializer};
 use utils::{AsBytes, Deserializable, DeserializationError, Randomizable, Serializable};
 
 mod u256;
@@ -74,12 +75,12 @@ impl FieldElement for BaseElement {
     type PositiveInteger = U256;
     type BaseField = Self;
 
-    const ZERO: Self = BaseElement(U256([0, 0, 0, 0]));
-    const ONE: Self = BaseElement(U256([1, 0, 0, 0]));
-
     const ELEMENT_BYTES: usize = ELEMENT_BYTES;
-
     const IS_CANONICAL: bool = true;
+
+    const ZERO: Self = BaseElement(U256([0, 0, 0, 0]));
+
+    const ONE: Self = BaseElement(U256([1, 0, 0, 0]));
 
     fn inv(self) -> Self {
         BaseElement::from(inv(self.0))
@@ -131,7 +132,7 @@ impl StarkField for BaseElement {
     const TWO_ADIC_ROOT_OF_UNITY: Self = BaseElement(G);
 
     fn get_modulus_le_bytes() -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(BaseElement::ELEMENT_BYTES);
+        let mut bytes = [0u8; ELEMENT_BYTES];
         Self::MODULUS.to_little_endian(&mut bytes);
         bytes.to_vec()
     }
@@ -366,7 +367,7 @@ impl AsBytes for BaseElement {
 
 impl Serializable for BaseElement {
     fn write_into<W: utils::ByteWriter>(&self, target: &mut W) {
-        let mut bytes = Vec::with_capacity(ELEMENT_BYTES);
+        let mut bytes = [0u8; ELEMENT_BYTES];
         self.0.to_little_endian(&mut bytes);
         target.write_u8_slice(&bytes);
     }
@@ -382,6 +383,15 @@ impl Deserializable for BaseElement {
             )));
         }
         Ok(BaseElement(value))
+    }
+}
+
+impl Serialize for BaseElement {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&(self.0.to_string()))
     }
 }
 

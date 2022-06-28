@@ -30,11 +30,12 @@ harness = false
 [features]
 concurrent = ["utils/concurrent", "std"]
 default = ["std"]
-std = ["utils/std"]
+std = ["utils/std", "serde/std"]
 
 [dependencies]
 utils = { version = "0.4", path = "../utils/core", package = "winter-utils", default-features = false }
 uint = "0.9.3"
+serde = { version = "1.0", default-features = false }
 
 [dev-dependencies]
 criterion = "0.3"

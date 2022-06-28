@@ -283,7 +283,7 @@ impl<H: Hasher> BatchMerkleProof<H> {
 
         // sort indexes in ascending order
         let original_indexes = indexes;
-        let index_map = super::map_indexes(indexes, self.depth.into())?;
+        let index_map = super::map_indexes(indexes, self.depth as usize)?;
         let indexes = index_map.keys().cloned().collect::<Vec<_>>();
 
         // populate the leaves and the first layer of nodes

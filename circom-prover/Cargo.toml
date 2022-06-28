@@ -1,0 +1,21 @@
+[package]
+name = "winter-circom-prover"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.60"
+
+[features]
+std = ["winter-crypto/std", "winter-math/std", "winter-prover/std", "winter-air/std", "winter-utils/std", "serde/std", "serde_json/std"]
+default = ["std"]
+concurrent = ["std", "winter-crypto/concurrent", "winter-math/concurrent", "winter-prover/concurrent", "winter-utils/concurrent"]
+
+
+[dependencies]
+winter-crypto = { version = "0.4.0", default-features = false, path = "../crypto" }
+winter-math = { version = "0.4.0", default-features = false, path = "../math" }
+winter-prover = { version = "0.4.0", default-features = false, path = "../prover" }
+winter-air = { version = "0.4.0", default-features = false, path = "../air" }
+winter-fri = { version = "0.4.0", default-features = false, path = "../fri" }
+serde = { version = "1.0", default-features = false }
+serde_json = { version = "1.0", default-features = false }
+winter-utils = { version = "0.4.0", default-features = false, path = "../utils/core" }
