@@ -1,4 +1,5 @@
-T=utils
+T=poseidon
+POT=18
 bls12-381 := 52435875175126190479447740508185965837690552500527637822603658699938581184513
 bn-128 := 21888242871839275222246405745257275088548364400416034343698204186575808495617
 dbg_p := 18446744073709551359
@@ -40,19 +41,19 @@ witness.wtns: input.json $T_cpp
 
 ### powersoftau generic ceremony
 
-pot12_0000.ptau:
-	snarkjs powersoftau new bls12-381 12 $@
+pot${POT}_0000.ptau:
+	snarkjs powersoftau new bls12-381 ${POT} $@
 
-pot12_0001.ptau: pot12_0000.ptau
+pot${POT}_0001.ptau: pot${POT}_0000.ptau
 	snarkjs powersoftau contribute $< $@
 
-pot12_final.ptau: pot12_0001.ptau
+pot${POT}_final.ptau: pot${POT}_0001.ptau
 	snarkjs powersoftau prepare phase2 $< $@
 
 
 ### zkey, verifkey and proof generation
 
-$T_0000.zkey: $T.r1cs pot12_final.ptau
+$T_0000.zkey: $T.r1cs pot${POT}_final.ptau
 	snarkjs groth16 setup $^ $@
 
 $T_0001.zkey: $T_0000.zkey
