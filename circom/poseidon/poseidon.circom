@@ -258,5 +258,3 @@ template Poseidon(n_inputs) {
     }
     out <== h.out[0];
 }
-
-component main = Poseidon(2);
