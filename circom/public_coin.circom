@@ -3,7 +3,7 @@ pragma circom 2.0.4;
 include "./poseidon/poseidon.circom";
 include "./utils.circom";
 
-template PublicCoin(num_fri_layers, trace_width, ce_blowup_factor) {
+template PublicCoin(num_fri_layers, trace_width, trace_length, ce_blowup_factor, num_draws, num_queries, lde_blowup_size) {
     signal input trace_commitment;
     signal input constraint_commitment;
     signal input ood_constraint_evaluations_reduced;
@@ -16,6 +16,7 @@ template PublicCoin(num_fri_layers, trace_width, ce_blowup_factor) {
     signal output deep_constraint_coefficients[ce_blowup_factor];
     signal output degree_adjustment_coefficients[2];
     signal output layer_alphas[num_fri_layers];
+    signal output query_positions[num_queries];
 
     var num_seeds = 1 + 1 + 1 + num_constraint_degrees;
     signal seed[num_seeds][2];
@@ -109,10 +110,34 @@ template PublicCoin(num_fri_layers, trace_width, ce_blowup_factor) {
 
     // TODO: check proof of work
 
-
-    for (var i = 0; i < num_queries) {
-        
+    component query_coin[num_draws];
+    component remove_duplicates = RemoveDuplicates(num_draws,num_queries)
+    signal query_draws[num_draws];
+    for (var i = 0; i < num_draws) {
+        query_coin[i] <== reseed[k].out;
+        query_coin[i] <== i + 1;
+        remove_duplicates.in[i] <== query_coin[i].out;
     }
 
 
+    // compute the size of the query elements in bits 
+
+    var bit_mask = trace_length * lde_blowup_size;
+    var mask_size = 0;
+    while(bit_mask != 0) {
+        bit_mask \= 2;
+        mask_size += 1;
+    }    
+
+    component num2bits[num_queries];
+    component bits2num[num_queries];
+    for (var i = 0; i < num_queries; i++){
+        num2bits[i] = Num2Bits(mask_size);
+        num2bits[i].in <== remove_duplicates.out[i];
+        bits2num[i] = Bits2Num(mask_size);
+        for (var j = 0; j < mask_size; j++){
+            bits2num[i].in[j] = num2bits[i].out[j]
+        }
+        query_positions[i] = bits2num[i].out;
+    }
 }
