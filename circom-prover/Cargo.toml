@@ -9,7 +9,6 @@ std = ["winter-crypto/std", "winter-math/std", "winter-prover/std", "winter-air/
 default = ["std"]
 concurrent = ["std", "winter-crypto/concurrent", "winter-math/concurrent", "winter-prover/concurrent", "winter-utils/concurrent"]
 
-
 [dependencies]
 winter-crypto = { version = "0.4.0", default-features = false, path = "../crypto" }
 winter-math = { version = "0.4.0", default-features = false, path = "../math" }

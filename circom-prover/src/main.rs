@@ -13,6 +13,9 @@ use prover::WorkProver;
 mod air;
 use air::WorkAir;
 
+#[cfg(test)]
+mod tests;
+
 fn main() {
     // PROOF
     // ===========================================================================

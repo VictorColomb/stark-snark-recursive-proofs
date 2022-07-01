@@ -255,10 +255,7 @@ impl<H: Hasher> BatchMerkleProof<H> {
         v.remove(&1).ok_or(MerkleTreeError::InvalidProof)
     }
 
-    pub fn to_paths(&self, indexes: &[usize]) -> Result<Vec<Vec<H::Digest>>, MerkleTreeError>
-    where
-        H: Hasher,
-    {
+    pub fn to_paths(&self, indexes: &[usize]) -> Result<Vec<Vec<H::Digest>>, MerkleTreeError> {
         if indexes.is_empty() {
             return Err(MerkleTreeError::TooFewLeafIndexes);
         }
@@ -330,6 +327,7 @@ impl<H: Hasher> BatchMerkleProof<H> {
                     i += 1;
                 } else {
                     nodes[index ^ 1] = self.nodes[i][nodes_indexes[i]];
+                    nodes_indexes[i] += 1;
                 }
                 let index = index >> 1;
                 nodes[index] = H::merge(&&two_nodes[index]);

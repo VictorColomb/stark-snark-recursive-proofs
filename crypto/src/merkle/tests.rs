@@ -237,12 +237,16 @@ fn verify_batch() {
 
 #[test]
 fn to_paths() {
-    let leaves = Digest256::bytes_as_digests(&LEAVES8).to_vec();
+    const SIZE: usize = 32;
+    let leaves = rand_array::<u128, SIZE>()
+        .iter()
+        .map(|leaf| Blake3_256::hash(&leaf.to_le_bytes()))
+        .collect::<Vec<_>>();
     let depth = log2(leaves.len()) as usize;
     let tree = MerkleTree::<Blake3_256>::new(leaves).unwrap();
 
     // generate a list of random unique indexes
-    let indexes: Vec<usize> = rand_array::<u64, 7>().map(|e| (e % 8) as usize).to_vec();
+    let indexes: Vec<usize> = rand_array::<u64, 5>().map(|e| e as usize % SIZE).to_vec();
     let indexes = indexes
         .iter()
         .cloned()
@@ -253,10 +257,20 @@ fn to_paths() {
     let proof = tree.prove_batch(&indexes).unwrap();
     let paths = proof.to_paths(&indexes).unwrap();
 
-    assert_eq!(paths.len(), indexes.len());
-    assert_eq!(paths[0].len(), depth + 1);
+    assert_eq!(proof.get_root(&indexes).unwrap(), *tree.root());
+
     for (i, path) in paths.iter().enumerate() {
-        assert_eq!(*path, tree.prove(indexes[i]).unwrap());
+        assert_eq!(
+            path.len(),
+            depth + 1,
+            "Authentication path {} of incorrect size.",
+            i
+        );
+        assert!(
+            MerkleTree::<Blake3_256>::verify(tree.root().clone(), indexes[i], &path).is_ok(),
+            "Authentication path {} root does not match.",
+            i
+        );
     }
 }
 
