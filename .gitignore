@@ -15,3 +15,7 @@ venv
 proof.json
 public.json
 verification_key.json
+
+#dev
+Makefile
+compile*

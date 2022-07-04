@@ -3,7 +3,8 @@ pragma circom 2.0.4;
 include "./poseidon/poseidon.circom";
 include "./utils.circom";
 
-template PublicCoin(num_fri_layers, trace_width, trace_length, ce_blowup_factor, num_draws, num_queries, lde_blowup_size) {
+template PublicCoin(num_fri_layers, trace_width, trace_length, ce_blowup_factor, num_draws, num_queries, lde_blowup_size, num_transition_constraints, num_assertions) {
+    signal input context_pub_inputs;
     signal input trace_commitment;
     signal input constraint_commitment;
     signal input ood_constraint_evaluations_reduced;
@@ -18,14 +19,16 @@ template PublicCoin(num_fri_layers, trace_width, trace_length, ce_blowup_factor,
     signal output layer_alphas[num_fri_layers];
     signal output query_positions[num_queries];
 
-    var num_seeds = 1 + 1 + 1 + num_constraint_degrees;
-    signal seed[num_seeds][2];
+    var num_seeds = 6;
     component reseed[num_seeds];
     
     // TODO: initial context seed
     var k = 0;
 
-
+    reseed[k] = Poseidon(1);
+    reseed[k].in[0] <== context_pub_inputs;
+    
+    
 
     k += 1;
     reseed[k] = Poseidon(2);
@@ -138,6 +141,6 @@ template PublicCoin(num_fri_layers, trace_width, trace_length, ce_blowup_factor,
         for (var j = 0; j < mask_size; j++){
             bits2num[i].in[j] = num2bits[i].out[j]
         }
-        query_positions[i] = bits2num[i].out;
+        query_positions[i] <== bits2num[i].out;
     }
 }
