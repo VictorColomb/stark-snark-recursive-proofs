@@ -1,4 +1,5 @@
 use serde_json::json;
+use winter_verifier::verify;
 use std::fs::File;
 use std::io::Write;
 use winter_air::Air;
@@ -38,8 +39,12 @@ fn main() {
     // build proof
     let prover = WorkProver::new(options);
     let trace = prover.build_trace(start, n);
-    let public_inputs = prover.get_pub_inputs(&trace);
+    let pub_inputs = prover.get_pub_inputs(&trace);
     let (proof, query_positions) = prover.prove(trace).unwrap();
+
+    // VERIFY PROOF
+    // ===========================================================================
+    assert!(verify::<WorkAir>(proof.clone(), pub_inputs.clone()).is_ok(), "invalid proof");
 
     // BUILD JSON OUTPUTS
     // ===========================================================================
@@ -47,7 +52,7 @@ fn main() {
     // retrieve air and proof options
     let air = WorkAir::new(
         proof.get_trace_info(),
-        public_inputs.clone(),
+        pub_inputs.clone(),
         proof.options().clone(),
     );
 
@@ -57,14 +62,14 @@ fn main() {
         proof,
         &air,
         &query_positions,
-        public_inputs.clone(),
+        pub_inputs.clone(),
         &mut fri_num_queries,
         &mut fri_tree_depths,
     );
 
     json["public_inputs"] = json!([
-        public_inputs.start,
-        public_inputs.result
+        pub_inputs.start,
+        pub_inputs.result
     ]);
 
     // PRINT TO FILE

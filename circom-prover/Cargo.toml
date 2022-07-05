@@ -5,7 +5,7 @@ edition = "2021"
 rust-version = "1.60"
 
 [features]
-std = ["winter-crypto/std", "winter-math/std", "winter-prover/std", "winter-air/std", "winter-utils/std", "serde/std", "serde_json/std"]
+std = ["winter-crypto/std", "winter-math/std", "winter-prover/std", "winter-verifier/std", "winter-air/std", "winter-utils/std", "serde/std", "serde_json/std"]
 default = ["std"]
 concurrent = ["std", "winter-crypto/concurrent", "winter-math/concurrent", "winter-prover/concurrent", "winter-utils/concurrent"]
 
@@ -13,6 +13,7 @@ concurrent = ["std", "winter-crypto/concurrent", "winter-math/concurrent", "wint
 winter-crypto = { version = "0.4.0", default-features = false, path = "../crypto" }
 winter-math = { version = "0.4.0", default-features = false, path = "../math" }
 winter-prover = { version = "0.4.0", default-features = false, path = "../prover" }
+winter-verifier = { version = "0.4.0", default-features = false, path = "../verifier" }
 winter-air = { version = "0.4.0", default-features = false, path = "../air" }
 winter-fri = { version = "0.4.0", default-features = false, path = "../fri" }
 serde = { version = "1.0", default-features = false }
