@@ -3,8 +3,19 @@ pragma circom 2.0.4;
 include "./poseidon/poseidon.circom";
 include "./utils.circom";
 
-template PublicCoin(num_fri_layers, trace_width, trace_length, ce_blowup_factor, num_draws, num_queries, lde_blowup_size, num_transition_constraints, num_assertions) {
-    signal input context_pub_inputs;
+template PublicCoin(
+    ce_blowup_factor,
+    lde_blowup_size,
+    num_assertions,
+    num_draws,
+    num_fri_layers,
+    num_pub_coin_seed,
+    num_queries,
+    num_transition_constraints,
+    trace_length,
+    trace_width
+) {
+    signal input pub_coin_seed[num_pub_coin_seed];
     signal input trace_commitment;
     signal input constraint_commitment;
     signal input ood_trace_frame[2][trace_width];
@@ -22,29 +33,31 @@ template PublicCoin(num_fri_layers, trace_width, trace_length, ce_blowup_factor,
 
     var num_seeds = 7;
     component reseed[num_seeds];
-    
-    // TODO: initial context seed
+
     var k = 0;
 
-    reseed[k] = Poseidon(1);
-    reseed[k].in[0] <== context_pub_inputs;
-    
+    // 0 - Initialize public coin seed
+    reseed[k] = Poseidon(num_pub_coin_seed);
+    for (var i = 0; i < num_pub_coin_seed; i++) {
+        reseed[k].in[i] <== pub_coin_seed[i];
+    }
+
     // 1 - Reseeding with trace commitment
 
     k += 1;
     reseed[k] = Poseidon(2);
     reseed[k].in[0] <== reseed[k-1].out;
     reseed[k].in[1] <== trace_commitment;
-    
+
     component trace_coin[num_transition_constraints + num_assertions][2] = Poseidon(2);
-    
+
     for (var i = 0; i < num_transition_constraints; i++) {
         for (var j = 0; j < 2; j++){
             trace_coin[i][j].in[0] <== reseed[k].out;
             trace_coin[i][j].in[1] <== 2 * i + j + 1;
             transition_coeffs[i][j] <== trace_coin[i][j].out;
         }
-    } 
+    }
 
 
     for (var i = 0; i < num_assertions; i++) {
@@ -85,7 +98,7 @@ template PublicCoin(num_fri_layers, trace_width, trace_length, ce_blowup_factor,
         reseed[k].in[i + 1] <== ood_trace_frame[1][i];
     }
 
-    
+
     component ood_coin[3 * trace_width + ce_blowup_factor + 2] = Poseidon(2);
     for (var i = 0; i < trace_width; i++){
         for (var j = 0; j < 3; j++){
@@ -116,7 +129,7 @@ template PublicCoin(num_fri_layers, trace_width, trace_length, ce_blowup_factor,
     for (var i = 0; i < ce_blowup_factor; i++) {
         reseed[k].in[i+1] <== ood_constraint_evaluations[i];
     }
-    
+
 
     // FIXME: num_fri_layers | + 1 | ??
     component fri_coin[num_fri_layers + 1] = Poseidon(2);
@@ -146,14 +159,14 @@ template PublicCoin(num_fri_layers, trace_width, trace_length, ce_blowup_factor,
     }
 
 
-    // compute the size of the query elements in bits 
+    // compute the size of the query elements in bits
 
     var bit_mask = trace_length * lde_blowup_size;
     var mask_size = 0;
     while(bit_mask != 0) {
         bit_mask \= 2;
         mask_size += 1;
-    }    
+    }
 
     component num2bits[num_queries];
     component bits2num[num_queries];

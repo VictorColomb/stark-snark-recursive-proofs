@@ -2,13 +2,20 @@ pragma circom 2.0.4;
 
 include "../air/basic.circom"
 
-template OodConsistencyCheck(trace_width, trace_width, trace_length, trace_generator, num_assertions, ce_blowup_factor) {
-    signal input z;
-    signal input frame[2][trace_width];
-    signal input transition_coeffs[trace_width][2];
+template OodConsistencyCheck(
+    ce_blowup_factor,
+    num_assertions,
+    num_public_inputs,
+    trace_generator,
+    trace_length,
+    trace_width
+) {
     signal input boundary_coeffs[num_assertions][2];
     signal input channel_ood_evaluations[ce_blowup_factor];
-    signal input transition_constraint_degrees[]
+    signal input frame[2][trace_width];
+    signal input public_inputs[num_public_inputs];
+    signal input transition_coeffs[trace_width][2];
+    signal input z;
 
     // TRANSITION CONSTRAINT EVALUATIONS
 
@@ -16,7 +23,7 @@ template OodConsistencyCheck(trace_width, trace_width, trace_length, trace_gener
     evaluate_transitions.x <== z;
     for (var i = 0; i < 2; i){
         for (var j = 0; j < trace_width; j) {
-            evaluate_transitions.frame <== frame[i][j];
+            evaluate_transitions.frame[i][j] <== frame[i][j];
         }
     }
 
@@ -27,7 +34,7 @@ template OodConsistencyCheck(trace_width, trace_width, trace_length, trace_gener
     for degree in degrees {
         acc += sum((transition_coeffs[i].0 + transition_coeffs[i].1 * x ^ (eval_degree - degree)) * evaluate_transitions[i])
     }
-    for now we only have transitions of degree 
+    for now we only have transitions of degree
     */
 
     var evaluation_result = evaluate_transitions.result;
@@ -43,14 +50,22 @@ template OodConsistencyCheck(trace_width, trace_width, trace_length, trace_gener
     // BOUNDARY CONSTRAINTS EVALUATIONS
     // TODO: add support for periodic values
 
-    component evaluate_boundary_constraints = BasicAssertions(/*TODO: pass num_assertions from a config.circom*/ 3,trace_length, trace_width, trace_generator);
+    component evaluate_boundary_constraints = BasicAssertions(
+        /*TODO: pass num_assertions from a config.circom*/
+        3,
+        trace_generator,
+        trace_length,
+        trace_width
+    );
 
-    evaluate_boundary_constraints.result <== result;
+    for (var i = 0; i < num_public_inputs; i++) {
+        evaluate_boundary_constraints.public_inputs[i] <== public_inputs[i];
+    }
     for (var i = 0; i < 2; i){
         for (var j = 0; j < trace_width; j) {
             evaluate_boundary_constraints.frame <== frame[i][j];
         }
-    } 
+    }
 
 
     component boundary_deg_adjustment[trace_width];
@@ -69,6 +84,4 @@ template OodConsistencyCheck(trace_width, trace_width, trace_length, trace_gener
     }
 
     channel_result === evaluation_result;
-
-
 }
