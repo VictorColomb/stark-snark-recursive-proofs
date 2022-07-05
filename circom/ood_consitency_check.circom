@@ -7,7 +7,7 @@ template OodConsistencyCheck(trace_width, trace_width, trace_length, trace_gener
     signal input frame[2][trace_width];
     signal input transition_coeffs[trace_width][2];
     signal input boundary_coeffs[num_assertions][2];
-    signal input channel_ood_evaluations[ce_blowup_factor][2];
+    signal input channel_ood_evaluations[ce_blowup_factor];
     signal input transition_constraint_degrees[]
 
     // TRANSITION CONSTRAINT EVALUATIONS
