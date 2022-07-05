@@ -1,9 +1,9 @@
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use winter_air::Air;
-use winter_crypto::{ElementHasher, Digest};
+use winter_crypto::{Digest, ElementHasher};
 use winter_fri::folding::fold_positions;
-use winter_math::{fields::f256::BaseElement, FieldElement, log2};
-use winter_prover::StarkProof;
+use winter_math::{fields::f256::BaseElement, log2, FieldElement};
+use winter_prover::{Serializable, StarkProof};
 
 /// Parse a [StarkProof] into a Circom-usable JSON object.
 ///
@@ -34,6 +34,7 @@ use winter_prover::StarkProof;
 ///     "ood_constraint_evaluations": [_; ce_blowup_factor],
 ///     "ood_trace_frame": [[_; trace_width]; 2],
 ///     "pow_nonce": _,
+///     "pub_coin_seed": [_; num_pub_coin_seed]
 ///     "trace_commitment": _,
 ///     "trace_evaluations": [[_; trace_width]; num_queries],
 ///     "trace_query_proofs": [[tree_depth + 1]; num_queries],
@@ -43,8 +44,9 @@ pub fn proof_to_json<AIR, H>(
     proof: StarkProof,
     air: &AIR,
     query_positions: &Vec<usize>,
+    pub_inputs: AIR::PublicInputs,
     fri_num_queries: &mut Vec<usize>,
-    fri_tree_depths: &mut Vec<usize>
+    fri_tree_depths: &mut Vec<usize>,
 ) -> Value
 where
     AIR: Air,
@@ -70,6 +72,24 @@ where
 
     // enforce only one trace segment to ensure compatibility with the Circom code
     assert_eq!(num_trace_segments, 1);
+
+    // PUBLIC COIN SEED
+    // ===========================================================================
+
+    // serialize public inputs and context
+    let mut pub_coin_seed = Vec::new();
+    pub_inputs.write_into(&mut pub_coin_seed);
+    context.write_into(&mut pub_coin_seed);
+
+    // turn into f256 field elements
+    while pub_coin_seed.len() % BaseElement::ELEMENT_BYTES != 0 {
+        pub_coin_seed.push(0);
+    }
+    let pub_coin_seed = pub_coin_seed
+        .as_slice()
+        .chunks(BaseElement::ELEMENT_BYTES)
+        .map(|bytes| BaseElement::from_le_bytes(bytes))
+        .collect::<Vec<_>>();
 
     // COMMITMENTS
     // ===========================================================================
@@ -177,16 +197,16 @@ where
 
     // convert batch merkle proofs into authentication paths
     // and map digests to BaseElements
-    let mut query_positions = query_positions.clone();
+    let mut indexes = query_positions.clone();
     let mut domain_size = lde_domain_size;
     let mut fri_layer_proofs = fri_layer_proofs
         .iter()
         .map(|merkle_proof| {
-            query_positions = fold_positions(&query_positions, domain_size, folding_factor);
+            indexes = fold_positions(&indexes, domain_size, folding_factor);
             domain_size /= folding_factor;
 
             merkle_proof
-                .to_paths(&query_positions)
+                .to_paths(&indexes)
                 .unwrap()
                 .iter()
                 .map(|path| {
@@ -236,9 +256,9 @@ where
         "ood_constraint_evaluations": ood_constraint_evaluations,
         "ood_trace_frame": ood_trace_frame,
         "pow_nonce": pow_nonce,
+        "pub_coin_seed": pub_coin_seed,
         "trace_commitment": trace_commitment,
         "trace_evaluations": trace_evaluations,
         "trace_query_proofs": trace_query_proofs,
-        "trace_length": context.trace_length(),
     })
 }

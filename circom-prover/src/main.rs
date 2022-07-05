@@ -1,3 +1,4 @@
+use serde_json::json;
 use std::fs::File;
 use std::io::Write;
 use winter_air::Air;
@@ -5,7 +6,6 @@ use winter_circom_prover::proof_to_json;
 use winter_crypto::hashers::Poseidon;
 use winter_math::{fields::f256::BaseElement, FieldElement};
 use winter_prover::{FieldExtension, HashFunction, ProofOptions, Prover};
-use serde_json::json;
 
 mod prover;
 use prover::WorkProver;
@@ -57,12 +57,11 @@ fn main() {
         proof,
         &air,
         &query_positions,
+        public_inputs.clone(),
         &mut fri_num_queries,
         &mut fri_tree_depths,
     );
 
-    // record public inputs
-    // TODO: move to [proof_to_json]
     json["public_inputs"] = json!([
         public_inputs.start,
         public_inputs.result

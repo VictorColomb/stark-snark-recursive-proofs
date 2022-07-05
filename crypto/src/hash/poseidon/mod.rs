@@ -1,7 +1,7 @@
 mod param;
 use core::marker::PhantomData;
 
-//Optimised version of poseidon with same output as the basic permutation
+// Optimized version of poseidon with same output as the basic permutation
 mod poseidon;
 
 #[cfg(test)]
