@@ -119,5 +119,70 @@ template MultiplierN (N){
    out <== comp[N-2].out; 
 }
 
+template IsZero() {
+    signal input in;
+    signal output out;
 
-component main = RemoveDuplicates(500,5);
+    signal inv;
+
+    inv <-- in!=0 ? 1/in : 0;
+
+    out <== -in*inv +1;
+    in*out === 0;
+}
+
+
+template IsEqual() {
+    signal input in[2];
+    signal output out;
+
+    component isz = IsZero();
+
+    in[1] - in[0] ==> isz.in;
+
+    isz.out ==> out;
+}
+
+template Selector(choices) {
+    signal input in[choices];
+    signal input index;
+    signal output out;
+    
+
+    component calcTotal = CalculateTotal(choices);
+    component eqs[choices];
+
+    // For each item, check whether its index equals the input index.
+    for (var i = 0; i < choices; i ++) {
+        eqs[i] = IsEqual();
+        eqs[i].in[0] <== i;
+        eqs[i].in[1] <== index;
+
+        // eqs[i].out is 1 if the index matches. As such, at most one input to
+        // calcTotal is not 0.
+        calcTotal.in[i] <== eqs[i].out * in[i];
+    }
+
+    // Returns 0 + 0 + 0 + item
+    out <== calcTotal.out;
+}
+
+
+
+template CalculateTotal(n) {
+    signal input in[n];
+    signal output out;
+
+    signal sums[n];
+
+    sums[0] <== in[0];
+
+    for (var i = 1; i < n; i++) {
+        sums[i] <== sums[i-1] + in[i]
+    }
+
+    out <== sums[n-1];
+}
+
+
+// component main = RemoveDuplicates(500,5);

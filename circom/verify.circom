@@ -83,22 +83,22 @@ template Verify(
     // 1 - Trace commitment
     // build random coefficients for the composition polynomial constraint_coeffs
 
-    signal ood_transition_coefficients[num_transition_constraints];
     for (var i = 0; i < num_transition_constraints; i++) {
         for (var j = 0; j < 2; j++) {
-            ood.transition_coeffs[i][j] <== transition_coeffs[i][j];
+            ood.transition_coeffs[i][j] <== pub_coin.transition_coeffs[i][j];
         }
     }
 
-    signal ood_boundary_coefficients[num_assertions];
     for (var i = 0; i < num_assertions; i++) {
         for (var j = 0; j < 2; j++) {
-            ood.boundary_coeffs[i][j] <== boundary_coeffs[i][j];
+            ood.boundary_coeffs[i][j] <== pub_coin.boundary_coeffs[i][j];
         }
     }
 
     // 2 - Constraint commitment
 
+    /* Nothing to do here : z is drawn in the public coin
+    z = pub_coin.z; */
 
     // 3 - OOD consistency check :  evaluate_constraints(ood_trace_frame,constraint_coeffs)
 
@@ -120,25 +120,75 @@ template Verify(
 
     // 4 - FRI commitment : generate DEEP coefficients
 
-    signal deep_trace_coefficients[trace_width][3];
-    for (var i = 0; i < trace_width; i++) {
-        for (var j = 0; j < 3; j++) {
-            deep_trace_coefficients[i][j] <== pub_coin.deep_trace_coefficients[i][j];
-        }
-    }
-
-    signal deep_constraint_coefficients[ce_blowup_factor];
-    for (var i = 0; i < ce_blowup_factor; i++) {
-        deep_constraint_coefficients[i] <== pub_coin.deep_constraint_coefficients[i];
-    }
-
-    signal degree_adjustment_coefficients[2];
-    for (var i = 0; i < 2; i++) {
-        degree_adjustment_coefficients[i] <== pub_coin.degree_adjustment_coefficients[i];
-    }
-
+    /* In public coin */
 
     // 5 - Trace and constraint queries : check POW, draw query positions
+
+    component MerkleOpeningsVerify(amount, depth);
+
+
+
+    // 6 - DEEP : compute DEEP at the queried positions
+
+    signal deep_composition[num_queries];
+    signal deep_evaluations[num_queries];
+    signal x_coordinates[num_queries];
+    component z_m = Pow(ce_blowup_factor);
+    z_m.in <== pub_coin.z;
+
+    // domain offset is hardcoded 7 to match our Winterfell config
+    signal x_pow[trace_length * lde_blowup_size];
+    component x_pow_domain_offset = Pow(7);
+    x_pow_domain_offset.in <== g_lde;
+    x_pow[0] <== 1;
+
+    for (var i = 1; i < trace_length * lde_blowup_size){
+        x_pow[i] <== x_pow[i-1] * x_pow_domain_offset;
+    }
+
+    component sel[num_queries];
+    signal trace_div[num_queries][trace_width][2];
+    signal constraint_div[num_queries][trace_width][2];
+
+    for (var i = 0; i < num_queries; i++) {
+
+        sel[i] = Selector(trace_length * lde_blowup_size);
+
+        for (var j = 0; j < trace_length * lde_blowup_size) {
+            sel[i].in[j] <== x_pow[j];
+        }
+
+        sel[i].index <== query_positions[i];
+
+
+        var result = 0;
+        for (var j = 0; j < trace_width; j++) {
+
+            // DEEP trace composition
+            trace_div[i][j][0] <-- (queried_trace_evaluations[i] - ood_trace_frame[0][i]) / (sel[i].out - pub_coin.z);
+            trace_div[i][j][0] * (sel[i].out - pub_coin.z) === queried_trace_evaluations[i] - ood_trace_frame[0][i];
+
+            trace_div[i][j][1] <-- (queried_trace_evaluations[i] - ood_trace_frame[1][i]) / (sel[i].out - pub_coin.z * g_trace);
+            trace_div[i][j][1] * (sel[i].out - pub_coin.z) === queried_trace_evaluations[i] - ood_trace_frame[1][i];
+
+            // DEEP constraint composition
+            constraint_div[i] <-- (constraint_evaluations[i] - ood_constraint_evaluations[i]) / (sel[i].out - z_m);
+            constraint_div[i]  * (sel[i].out - z_m) ===  constraint_evaluations[i] - ood_constraint_evaluations[i];
+
+            result += pub_coin.deep_trace_coefficients[j][0] * trace_div[i][j][0] + pub_coin.deep_trace_coefficients[j][1] * trace_div[i][j][1] + constraint_div[i] * pub_coin.deep_constraint_coefficients[i];
+        }
+
+        deep_composition[i] <== result;
+
+        // final composition
+
+        deep_evaluations[i] <== (deep_composition[i] + constraint_deep_composition[i]) * (pub_coin.degree_adjustment_coefficients[0] + sel[i].out * pub_coin.degree_adjustment_coefficients[1]);
+
+
+
+    }
+
+
 
     component traceCommitmentVerifier = VerifyMerkleOpenings(num_queries, tree_depth);
     traceCommitmentVerifier.root <== trace_commitment;
@@ -159,7 +209,8 @@ template Verify(
     }
 
 
-    // 6 - DEEP : compute DEEP at the queried positions
+    // DOMAIN_OFFSET == 7
+
 
     // 7 - FRI verification
 

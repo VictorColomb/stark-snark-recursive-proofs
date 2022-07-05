@@ -98,7 +98,8 @@ template PublicCoin(
         reseed[k].in[i + 1] <== ood_trace_frame[1][i];
     }
 
-
+    // TODO: the third value isnt used as long  as we do not have auxiliary trace segments
+    // We could remove the hash and just increment our coin counter by one
     component ood_coin[3 * trace_width + ce_blowup_factor + 2] = Poseidon(2);
     for (var i = 0; i < trace_width; i++){
         for (var j = 0; j < 3; j++){

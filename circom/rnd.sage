@@ -3,8 +3,6 @@ For the query positions we draw values from PRNG until we get as many unique val
 As checking if for dupplicates would be of quadratic complexity drawing 1000 values would generate 1 000 000 constraints
 The following function gives us the number of times we have to drawo to obtain a 2**-128 probability of drawing enough values
 """
-from math import factorial
-
 
 DOMAIN_SIZE = 128
 NUM_QUERIES = 32
