@@ -37,11 +37,11 @@ template OodConsistencyCheck(
     for now we only have transitions of degree
     */
 
-    var evaluation_result = evaluate_transitions.result;
+    var evaluation_result = 0;
 
     component transition_deg_adjustment[trace_width];
     for (var i = 0; i < trace_width; i++) {
-        transition_deg_adjustment[i] = Pow(trace_length * ce_blowup_factor - 1 - evaluation_result[i].transition_degree);
+        transition_deg_adjustment[i] = Pow(trace_length * ce_blowup_factor - 1 - evaluate_transitions.transition_degree[i]);
         transition_deg_adjustment[i].in <== z;
         evaluation_result += (transition_coeffs[i][0] + transition_coeffs[i][1] * transition_deg_adjustment[i].out) * evaluate_transitions.out[i];
     }
@@ -70,7 +70,7 @@ template OodConsistencyCheck(
 
     component boundary_deg_adjustment[trace_width];
     for (var i = 0; i < num_assertions; i++) {
-        boundary_deg_adjustment[i] = Pow(trace_length * ce_blowup_factor - 1 + evaluate_boundary_constraints[i].divisor_degree - (trace_length - 1));
+        boundary_deg_adjustment[i] = Pow(trace_length * ce_blowup_factor - 1 + evaluate_boundary_constraints.divisor_degree[i] - (trace_length - 1));
         boundary_deg_adjustment[i].in <== z;
         evaluation_result += (boundary_coeffs[i][0] + boundary_coeffs[i][1] * boundary_deg_adjustment[i].out) * evaluate_boundary_constraints.out[i];
     }

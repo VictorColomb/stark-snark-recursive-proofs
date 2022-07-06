@@ -5,7 +5,7 @@ include "../circom/utils.circom"
 template BasicTransitions(trace_width) {
     signal input frame[2][2];
     signal output out[trace_width];
-    signal output transition_degree[trace_length];
+    signal output transition_degree[trace_width];
 
     // frame[0] = current | frame[1] = next
 

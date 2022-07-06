@@ -57,9 +57,11 @@ template Verify(
         trace_length,
         trace_width
     );
+
     for (var i = 0; i < num_pub_coin_seed; i++) {
         pub_coin.pub_coin_seed[i] <== pub_coin_seed[i];
     }
+    
     pub_coin.trace_commitment <== trace_commitment;
     pub_coin.constraint_commitment <== constraint_commitment;
 
@@ -72,7 +74,6 @@ template Verify(
         pub_coin.ood_constraint_evaluations[i] <== ood_constraint_evaluations[i];
     }
 
-    pub_coin.ood_constraint_evaluations_reduced <== ood_constraint_evaluations_reduced;
     pub_coin.pow_nonce <== pow_nonce;
 
     for (var i = 0; i < num_fri_layers; i++) {
@@ -80,7 +81,7 @@ template Verify(
     }
 
 
-    // 1 - Trace commitment
+    /* 1 - Trace commitment */
     // build random coefficients for the composition polynomial constraint_coeffs
 
     for (var i = 0; i < num_transition_constraints; i++) {
@@ -95,14 +96,12 @@ template Verify(
         }
     }
 
-    // 2 - Constraint commitment
+    /* 2 - Constraint commitment */
 
-    /* Nothing to do here : z is drawn in the public coin
-    z = pub_coin.z; */
+    // Nothing to do here : z is drawn in the public coin and is used as pub_coin.z;
 
-    // 3 - OOD consistency check :  evaluate_constraints(ood_trace_frame,constraint_coeffs)
+    /* 3 - OOD consistency check :  evaluate_constraints(ood_trace_frame,constraint_coeffs) */
 
-    // get_transition_constraints(air, composition_coefficients) <== public input
 
     for (var i = 0; i < num_public_inputs; i++) {
         ood.public_inputs[i] <== public_inputs[i];
@@ -118,14 +117,29 @@ template Verify(
     }
 
 
-    // 4 - FRI commitment : generate DEEP coefficients
+    /* 4 - FRI commitment : generate DEEP coefficients */
 
-    /* In public coin */
+    // Everything is generated in the public coin 
 
     // 5 - Trace and constraint queries : check POW, draw query positions
 
-    component MerkleOpeningsVerify(amount, depth);
+    component traceCommitmentVerifier = VerifyMerkleOpenings(num_queries, tree_depth);
+    traceCommitmentVerifier.root <== trace_commitment;
+    for (var i = 0; i < num_queries; i++) {
+        traceCommitmentVerifier.indexes[i] <== pub_coin.query_indexes[i];
+        for (var j = 0; j < tree_depth; j++) {
+            traceCommitmentVerifier.openings[i][j] <== trace_query_proofs[i][j];
+        }
+    }
 
+    component constraintCommitmentVerifier = VerifyMerkleOpenings(num_queries, tree_depth);
+    constraintCommitmentVerifier.root <== constraint_commitment;
+    for (var i = 0; i < num_queries; i++) {
+        constraintCommitmentVerifier.indexes[i] <== pub_coin.query_indexes[i];
+        for (var j = 0; j < tree_depth; j++) {
+            constraintCommitmentVerifier.openings[i][j] <== constraint_query_proofs[i][j];
+        }
+    }
 
 
     // 6 - DEEP : compute DEEP at the queried positions
@@ -187,29 +201,6 @@ template Verify(
 
 
     }
-
-
-
-    component traceCommitmentVerifier = VerifyMerkleOpenings(num_queries, tree_depth);
-    traceCommitmentVerifier.root <== trace_commitment;
-    for (var i = 0; i < num_queries; i++) {
-        traceCommitmentVerifier.indexes[i] <== pub_coin.query_indexes[i];
-        for (var j = 0; j < tree_depth; j++) {
-            traceCommitmentVerifier.openings[i][j] <== trace_query_proofs[i][j];
-        }
-    }
-
-    component constraintCommitmentVerifier = VerifyMerkleOpenings(num_queries, tree_depth);
-    constraintCommitmentVerifier.root <== constraint_commitment;
-    for (var i = 0; i < num_queries; i++) {
-        constraintCommitmentVerifier.indexes[i] <== pub_coin.query_indexes[i];
-        for (var j = 0; j < tree_depth; j++) {
-            constraintCommitmentVerifier.openings[i][j] <== constraint_query_proofs[i][j];
-        }
-    }
-
-
-    // DOMAIN_OFFSET == 7
 
 
     // 7 - FRI verification
