@@ -9,10 +9,10 @@ include "./utils.circom";
  * recreated here, and as all of the inputs needed are available from the start,
  * we can create a component whose initialized at the start of the verification,
  * whose outputs will be accessed throughout the rest of the verification.
- * 
+ *
  * ARGUMENTS:
  * - See verify.circom
- * 
+ *
  * INPUTS:
  * - pub_coin_seed: serialized public inputs and context.
  * - trace_commitment: merkle root commit for the trace.
@@ -20,7 +20,7 @@ include "./utils.circom";
  * - ood_trace_frame: Out Of domain trace frame.
  * - ood_constraint_evaluations: Constraint polynomials evaluated out of domain
  * - pow_nonce: Proof of work nonce
- * 
+ *
  * OUTPUTS:
  * - transition_coeffs: coefficients for transition constraints needed for the OOD consistency check.
  * - boundary_coeffs: coefficients for boundary constraints needed for the OOD consistency check.
@@ -31,7 +31,7 @@ include "./utils.circom";
  * - query_positions: positions at wich we will check the openings for both trace states and constraint evaluations.
  * - z: Out Of Domain point of evaluation, generated in the public coin.
  *
- * TODO: 
+ * TODO:
  * - The third value isnt used as long  as we do not have auxiliary trace segments.
      We could remove the hash and just increment our coin counter by one.
  */

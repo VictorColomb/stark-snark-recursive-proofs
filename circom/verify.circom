@@ -5,10 +5,10 @@ include "merkle.circom";
 
 /**
  * A circom verifier for STARKs.
- * 
- * 
- * 
- * 
+ *
+ *
+ *
+ *
  * ARGUMENTS:
  * - ce_blowup_factor: constraint evaluation domain blowup factor.
  * - folding_factor: FRI folding factor.
@@ -27,7 +27,7 @@ include "merkle.circom";
  * - trace_length: number of steps in the proven calculation.
  * - trace_width: number of registers need to prove the calculations.
  * - tree_depth: trace and commitments tree depth log2(lde_domain_size)
- * 
+ *
  * INPUTS:
  * - constraint_commitment: root of the constraint merkle tree.
  * - constraint_evaluations: constraint polynomials evaluations
@@ -37,22 +37,22 @@ include "merkle.circom";
  * - fri_layer_proofs:
  * - fri_layer_queries:
  * - fri_remainder:
- * - ood_constraint_evaluations: constraint out of domain evaluations to be 
-     checked during the OOD consistency check. 
+ * - ood_constraint_evaluations: constraint out of domain evaluations to be
+     checked during the OOD consistency check.
  * - ood_trace_frame: out of domain frame to evaluate constraints to check
-     consitency with the ood_constraint_evaluations. 
+     consitency with the ood_constraint_evaluations.
  * - pub_coin_seed: serialized public inputs and context to initialize the public coin.
  * - pow_nonce: nonce for the proof of work determined by the grinding factor in
      the proof options.
  * - trace_commitment: root of the trace merkle tree.
- * - trace_evaluations: trace polynomials evaluations 
+ * - trace_evaluations: trace polynomials evaluations
  * - trace_query_proofs: merkle authentication paths to check consistency between
      the commitment and the queries at pseudo-random position
- * 
+ *
  * TODO:
- * - 
- * - 
- * - 
+ * -
+ * -
+ * -
  */
 template Verify(
     ce_blowup_factor,
@@ -152,7 +152,7 @@ template Verify(
     // Nothing to do here: z is drawn in the public coin and is used as pub_coin.z;
 
 
-    /* 3 - OOD consistency check: check that the given out of domain evaluation 
+    /* 3 - OOD consistency check: check that the given out of domain evaluation
        are consistent when reevaluating them.
      */
 
@@ -173,7 +173,7 @@ template Verify(
 
     /* 4 - FRI commitment: generate DEEP coefficients */
 
-    // Everything is generated in the public coin 
+    // Everything is generated in the public coin
 
 
     // 5 - Trace and constraint queries: check POW, draw query positions
@@ -252,7 +252,6 @@ template Verify(
         // final composition
 
         deep_evaluations[i] <== (deep_composition[i] + constraint_deep_composition[i]) * (pub_coin.degree_adjustment_coefficients[0] + sel[i].out * pub_coin.degree_adjustment_coefficients[1]);
-
 
 
     }

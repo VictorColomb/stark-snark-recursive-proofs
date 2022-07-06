@@ -5,14 +5,14 @@ include "../circom/utils.circom"
 /**
  * Define how your computation transitions from one step
  * to the next one.
- * 
+ *
  * INPUTS:
  * - frame: Out Of Domain frame on which we will check the
  * the consistency with the channel.
- * 
+ *
  * OUTPUTS:
  * - out: Out Of Domain transition evaluation for each trace column
- * - transition_degree : degree of the transition, will be used for degree 
+ * - transition_degree : degree of the transition, will be used for degree
  *   adjustment. Should be set to the number of trace columns multiplied in
  *   during the transition.
  */
@@ -37,14 +37,14 @@ template BasicTransitions(trace_width) {
  * These assertions will then be transformed into boundray constraints.
  * For now only single assertions are supported :
  * --> Assigning a value to a fixed step for a fixed trace column.
- * 
+ *
  * INPUTS:
  * - public_inputs: inputs used for the calculation
  * - frame: Out Of Domain evaluation frame
- * 
+ *
  * OUTPUTS:
  * - out: evaluation of the boundary constraints against each trace column
- * - divisor_degree: degree of the polynomial used as divisor, need for degree 
+ * - divisor_degree: degree of the polynomial used as divisor, need for degree
  *   adjustment
  *
  * TODO:

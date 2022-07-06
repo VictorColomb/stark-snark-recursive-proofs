@@ -5,10 +5,10 @@ include "param.circom";
 /**
  * Poseidon S-Box.
  * For the verifier the S-Box exponent is hardcoded as 5
- * 
+ *
  * INPUTS:
  * - in: x
- * 
+ *
  * OUTPUTS:
  * - out: x ** 5
  */
@@ -27,10 +27,10 @@ template Sigma() {
 
 /**
  * Adding round constants.
- * 
+ *
  * INPUTS:
  * - in: current state.
- * 
+ *
  * OUTPUTS:
  * - out: state + round_constants
  */
@@ -45,13 +45,13 @@ template Ark(t, C, r) {
 
 /**
  * Computes M * state matrix multiplication.
- * 
+ *
  * ARGUMENTS:
  * - t: state width.
  * - M: matrix to multiply.
  * INPUTS:
  * - in: current state.
- * 
+ *
  * OUTPUTS:
  * - out: M * state
  */
@@ -71,14 +71,14 @@ template Mix(t, M) {
 
 /**
  * Sparse matrix multiplication
- * 
+ *
  * ARGUMENTS:
  * - t: state width.
  * - S: formatted sparse matrix to multiply.
  * - r: current round.
  * INPUTS:
  * - in: current state.
- * 
+ *
  * OUTPUTS:
  * - out: SparseM * state
  */
@@ -105,10 +105,10 @@ template MixS(t, S, r) {
  * It has been modified to directly output a circom file.
  * ARGUMENTS:
  * - t: state width.
- * 
+ *
  * INPUTS:
  * - in: current state.
- * 
+ *
  * OUTPUTS:
  * - out: permuted state
  */
@@ -234,13 +234,13 @@ template PoseidonPerm(t) {
  *
  * ARGUMENTS:
  * - l: length of the input.
- * - t: state width used for the permutation. 
+ * - t: state width used for the permutation.
  * - c: sponge capacity. Here, we use c = 1 as Poseidon security will be in
  *      c * nbits_element / 2 which with c = 1 gives 128bits of security.
- * 
+ *
  * INPUTS:
  * - in: input to be hashed.
- * 
+ *
  * OUTPUTS:
  * - out: Hash output, of t - c elements.
  */
@@ -274,15 +274,15 @@ template PoseidonHash(l, t, c) {
 
 /**
  * Sponge function for Poseidon.
- * 
+ *
  * ARGUMENTS:
  * - l: length of the input.
  * - t: state width.
  * - c: sponge capacity. The sponge absorbs at a t - c rate before every permutation
- * 
+ *
  * INPUTS:
  * - in: padded input.
- * 
+ *
  * OUTPUTS:
  * - out: hashed input.
  */
@@ -328,13 +328,13 @@ template Sponge(l, t, c) {
 
 /**
  * Poseidon boilerplate to simplify usage  and readability.
- * 
+ *
  * ARGUMENTS:
  * - l_inputs: length of the input sequence.
- * 
+ *
  * INPUTS:
  * - in: input to be hashed. It will be interpreted as a sequence of field elements.
- * 
+ *
  * OUTPUTS:
  * - out: hashed input.
  */

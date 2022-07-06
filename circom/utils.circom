@@ -64,15 +64,15 @@ template Bits2Num(n) {
  * If there are not enough distinct elements in the input to fill the output,
  * the program will crash.
  * For example if used with output_len > input_len, the program will panic.
- * 
- * 
+ *
+ *
  * ARGUMENTS:
  * - input_len: the length of the input list;
  * - output_len: the number of elements in the output;
- * 
+ *
  * INPUTS:
  * - in: a list to remove duplicates from.
- * 
+ *
  * OUTPUTS:
  * - out: a list of output_len distinct elements from the input
  */
