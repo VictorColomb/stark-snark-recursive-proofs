@@ -56,7 +56,7 @@ template Bits2Num(n) {
     lc1 ==> out;
 }
 
-template RemoveDuplicates(input_len,output_len){
+template RemoveDuplicates(input_len,output_len) {
     signal input in[input_len];
     signal output out[output_len];
     var inter[output_len];
@@ -64,7 +64,7 @@ template RemoveDuplicates(input_len,output_len){
     // compute a list without duplicates
     var dup;
     var k = 0;
-    for(var i = 0; i < input_len; i++){ 
+    for(var i = 0; i < input_len; i++){
         dup = 1;
         for (var j = 0; j < k; j++){
             dup *= in[i] - inter[j];
@@ -91,32 +91,17 @@ template RemoveDuplicates(input_len,output_len){
     }
 }
 
-template Multiplier2(){
-   //Declaration of signals.
-   signal input in1;
-   signal input in2;
-   signal output out;
+template MultiplierN(N) {
+    signal input in[N];
+    signal output out;
 
-   //Statements.
-   out <== in1 * in2;
-}
+    signal inter[N-1];
 
-template MultiplierN (N){
-   signal input in[N];
-   signal output out;
-   component comp[N-1];
-
-   for(var i = 0; i < N-1; i++){
-       comp[i] = Multiplier2();
-   }
-   comp[0].in1 <== in[0];
-   comp[0].in2 <== in[1];
-   for(var i = 0; i < N-2; i++){
-       comp[i+1].in1 <== comp[i].out;
-       comp[i+1].in2 <== in[i+2];
-
-   }
-   out <== comp[N-2].out; 
+    inter[0] <== in[0] * in[1];
+    for(var i = 0; i < N - 2; i++){
+        inter[i + 1] <== inter[i] * in[i + 2];
+    }
+    out <== inter[N - 2];
 }
 
 template IsZero() {
@@ -131,7 +116,6 @@ template IsZero() {
     in*out === 0;
 }
 
-
 template IsEqual() {
     signal input in[2];
     signal output out;
@@ -143,11 +127,50 @@ template IsEqual() {
     isz.out ==> out;
 }
 
+/**
+ * Compare two field elements.
+ *
+ * INPUTS:
+ * - in[2]: the two field elements to compare
+ *
+ * OUTPUTS:
+ * - out: 1 if the first input is smaller, 0 otherwise
+ */
+template LessThan(n) {
+    assert(n <= 254);
+    signal input in[2];
+    signal output out;
+
+    component n2b = Num2Bits(n+1);
+
+    n2b.in <== in[0] + (1<<n) - in[1];
+
+    out <== 1 - n2b.out[n];
+}
+
+/**
+ * If sel == 0 then outL = L and outR = R
+ * If sel == 1 then outL = R and outR = L
+ */
+template Switcher() {
+    signal input sel;
+    signal input L;
+    signal input R;
+    signal output outL;
+    signal output outR;
+
+    signal aux;
+
+    aux <== (R - L) * sel;
+    outL <== L + aux;
+    outR <== R - aux;
+}
+
 template Selector(choices) {
     signal input in[choices];
     signal input index;
     signal output out;
-    
+
 
     component calcTotal = CalculateTotal(choices);
     component eqs[choices];
@@ -167,8 +190,6 @@ template Selector(choices) {
     out <== calcTotal.out;
 }
 
-
-
 template CalculateTotal(n) {
     signal input in[n];
     signal output out;
@@ -178,11 +199,41 @@ template CalculateTotal(n) {
     sums[0] <== in[0];
 
     for (var i = 1; i < n; i++) {
-        sums[i] <== sums[i-1] + in[i]
+        sums[i] <== sums[i-1] + in[i];
     }
 
     out <== sums[n-1];
 }
 
+/**
+ * Perform a modulo on a field element, using substractions.
+ *
+ * ARGUMENTS:
+ * - max: the maximum number of substractions this template will perform. If
+          the field element is further away, the output will be wrong.
+ * - n: the number of bits of the field elements.
+ *
+ * INPUTS: in, modulo
+ * OUTPUTS: out
+ */
+template Modulo(max, n) {
+    signal input in;
+    signal input modulo;
+    signal output out;
 
-// component main = RemoveDuplicates(500,5);
+    signal inter[max];
+    component lt[max];
+
+    lt[0] = LessThan(n);
+    lt[0].in[0] <== in;
+    lt[0].in[1] <== modulo;
+    inter[0] <== in - modulo * (1 - lt[0].out);
+
+    for (var i = 1; i < max; i++) {
+        lt[i] = LessThan(n);
+        lt[i].in[0] <== inter[i - 1];
+        lt[i].in[1] <== modulo;
+        inter[i] <== inter[i - 1] - modulo * (1 - lt[i].out);
+    }
+    out <== inter[max - 1];
+}
