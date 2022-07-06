@@ -56,6 +56,26 @@ template Bits2Num(n) {
     lc1 ==> out;
 }
 
+/**
+ * Remove duplicates from a list with specified number of inputs.
+ * This component takes the first output_len distinct elements of its input
+ * but only proves that its output comes from the input. It DOES NOT PROVE
+ * that the output elements are the first in the same order than in the input.
+ * If there are not enough distinct elements in the input to fill the output,
+ * the program will crash.
+ * For example if used with output_len > input_len, the program will panic.
+ * 
+ * 
+ * ARGUMENTS:
+ * - input_len: the length of the input list;
+ * - output_len: the number of elements in the output;
+ * 
+ * INPUTS:
+ * - in: a list to remove duplicates from.
+ * 
+ * OUTPUTS:
+ * - out: a list of output_len distinct elements from the input
+ */
 template RemoveDuplicates(input_len,output_len) {
     signal input in[input_len];
     signal output out[output_len];

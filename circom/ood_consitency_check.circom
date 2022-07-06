@@ -2,6 +2,29 @@ pragma circom 2.0.4;
 
 include "../air/basic.circom"
 
+
+/**
+ * Checks that the evaluations of composition polynomials sent by the prover 
+ * are consistent with valuations obtained by evaluating constraints over the
+ * out-of-domain frame. This template does not return any signal, its purpose is
+ * just to create the 'channel_result === evaluation_result' constraint
+ * 
+ * ARGUMENTS:
+ * - See verify.circom
+ * 
+ * INPUTS:
+ * - boundary_coeffs: Fiat-Shamir coefficients for the boundary constraints.
+ * - channel_ood_evaluations: Out Of Domain evaluations given in the proof.
+ * - frame: the Out Of Domain frame over which the constraints will be evaluated.
+ * - public_inputs: inputs used for the calculation
+ * - transition_coeffs: Fiat-Shamir coefficients for the transition constraints.
+ * - z: Out Of Domain point of evaluation, generated in the public coin.
+ *
+ * TODO: 
+ * - add support for composition with different degrees
+ * - add support for periodic values
+ * - group transitions by degree to reduce the number of degree adjustment
+ */
 template OodConsistencyCheck(
     ce_blowup_factor,
     num_assertions,
@@ -28,15 +51,6 @@ template OodConsistencyCheck(
     }
 
 
-    /* TODO: add support for composition with different degrees
-
-    acc = 0
-    for degree in degrees {
-        acc += sum((transition_coeffs[i].0 + transition_coeffs[i].1 * x ^ (eval_degree - degree)) * evaluate_transitions[i])
-    }
-    for now we only have transitions of degree
-    */
-
     var evaluation_result = 0;
 
     component transition_deg_adjustment[trace_width];
@@ -48,11 +62,9 @@ template OodConsistencyCheck(
 
 
     // BOUNDARY CONSTRAINTS EVALUATIONS
-    // TODO: add support for periodic values
 
     component evaluate_boundary_constraints = BasicAssertions(
-        /*TODO: pass num_assertions from a config.circom*/
-        3,
+        num_assertions,
         trace_generator,
         trace_length,
         trace_width
@@ -74,6 +86,10 @@ template OodConsistencyCheck(
         boundary_deg_adjustment[i].in <== z;
         evaluation_result += (boundary_coeffs[i][0] + boundary_coeffs[i][1] * boundary_deg_adjustment[i].out) * evaluate_boundary_constraints.out[i];
     }
+
+    // reduce evaluations of composition polynomial columns sent by the prover into
+    // a single value by computing sum(z^i * value_i), where value_i is the evaluation of the ith
+    // column polynomial at z^m, where m is the total number of column polynomials
 
     var channel_result = 0
     component channel_ood_pow[ce_blowup_factor];

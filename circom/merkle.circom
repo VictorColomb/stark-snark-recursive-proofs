@@ -18,7 +18,6 @@ template MerkleOpeningVerify(depth) {
     signal input index;
     signal input opening[depth + 1];
     signal input root;
-    signal output out;
 
     component index_bits = Num2Bits(depth);
     component node_index_bits = Num2Bits(depth + 1);

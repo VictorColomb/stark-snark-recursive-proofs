@@ -3,6 +3,38 @@ pragma circom 2.0.4;
 include "./poseidon/poseidon.circom";
 include "./utils.circom";
 
+/**
+ * Pseudo-random generator used to create and verify a STARK. Usually, random
+ * coefficient are drawn during the proof when they are needed. This order is
+ * recreated here, and as all of the inputs needed are available from the start,
+ * we can create a component whose initialized at the start of the verification,
+ * whose outputs will be accessed throughout the rest of the verification.
+ * 
+ * ARGUMENTS:
+ * - See verify.circom
+ * 
+ * INPUTS:
+ * - pub_coin_seed: serialized public inputs and context.
+ * - trace_commitment: merkle root commit for the trace.
+ * - constraint_commitment: merkle root commit for the constraints.
+ * - ood_trace_frame: Out Of domain trace frame.
+ * - ood_constraint_evaluations: Constraint polynomials evaluated out of domain
+ * - pow_nonce: Proof of work nonce
+ * 
+ * OUTPUTS:
+ * - transition_coeffs: coefficients for transition constraints needed for the OOD consistency check.
+ * - boundary_coeffs: coefficients for boundary constraints needed for the OOD consistency check.
+ * - deep_trace_coefficients: trace coefficients for DEEP composition polynomial.
+ * - deep_constraint_coefficients: constraint coefficients for DEEP composition polynomial.
+ * - degree_adjustment_coefficients : coefficients used when adjusting degrees during DEEP composition.
+ * - layer_alphas: see fri.circom
+ * - query_positions: positions at wich we will check the openings for both trace states and constraint evaluations.
+ * - z: Out Of Domain point of evaluation, generated in the public coin.
+ *
+ * TODO: 
+ * - The third value isnt used as long  as we do not have auxiliary trace segments.
+     We could remove the hash and just increment our coin counter by one.
+ */
 template PublicCoin(
     ce_blowup_factor,
     lde_blowup_size,
@@ -36,7 +68,7 @@ template PublicCoin(
 
     var k = 0;
 
-    // 0 - Initialize public coin seed
+    // 0 - Initialize public coin seed with public inputs and context serialized
     reseed[k] = Poseidon(num_pub_coin_seed);
     for (var i = 0; i < num_pub_coin_seed; i++) {
         reseed[k].in[i] <== pub_coin_seed[i];
@@ -49,8 +81,8 @@ template PublicCoin(
     reseed[k].in[0] <== reseed[k-1].out;
     reseed[k].in[1] <== trace_commitment;
 
+    // drawing transition and constraint coefficients for OOD consistency check
     component trace_coin[num_transition_constraints + num_assertions][2] = Poseidon(2);
-
     for (var i = 0; i < num_transition_constraints; i++) {
         for (var j = 0; j < 2; j++){
             trace_coin[i][j].in[0] <== reseed[k].out;
@@ -58,7 +90,6 @@ template PublicCoin(
             transition_coeffs[i][j] <== trace_coin[i][j].out;
         }
     }
-
 
     for (var i = 0; i < num_assertions; i++) {
         for (var j = 0; j < 2; j++){
@@ -76,6 +107,7 @@ template PublicCoin(
     reseed[k].in[0] <== reseed[k-1].out;
     reseed[k].in[1] <== constraint_commitment;
 
+    // OOD point for evaluations
     component constraint_coin = Poseidon(2);
     constraint_coin.in[0] <== reseed[k].out;
     constraint_coin.in[1] <== 1;
@@ -98,27 +130,26 @@ template PublicCoin(
         reseed[k].in[i + 1] <== ood_trace_frame[1][i];
     }
 
-    // TODO: the third value isnt used as long  as we do not have auxiliary trace segments
-    // We could remove the hash and just increment our coin counter by one
-    component ood_coin[3 * trace_width + ce_blowup_factor + 2] = Poseidon(2);
+    // drawing all coefficient needed for the DEEP composition polynomial
+    component deep_coin[3 * trace_width + ce_blowup_factor + 2] = Poseidon(2);
     for (var i = 0; i < trace_width; i++){
         for (var j = 0; j < 3; j++){
-        ood_coin[3 * i + j].in[0] <== reseed[k].out;
-        ood_coin[3 * i + j].in[1] <== 3 * i + j + 1;
-        deep_trace_coefficients[i][j] <== ood_coin[3 * i + j].out;
+        deep_coin[3 * i + j].in[0] <== reseed[k].out;
+        deep_coin[3 * i + j].in[1] <== 3 * i + j + 1;
+        deep_trace_coefficients[i][j] <== deep_coin[3 * i + j].out;
         }
     }
 
     for (var i = 0; i < trace_width; i++){
-        ood_coin[i + 3 * trace_width].in[0] <== reseed[k].out;
-        ood_coin[i + 3 * trace_width].in[1] <== i + 1;
-        deep_constraint_coefficients[i] <== ood_coin[i + 3 * trace_width].out ;
+        deep_coin[i + 3 * trace_width].in[0] <== reseed[k].out;
+        deep_coin[i + 3 * trace_width].in[1] <== i + 1;
+        deep_constraint_coefficients[i] <== deep_coin[i + 3 * trace_width].out ;
     }
 
     for (var i = 0; i < 2; i++){
-        ood_coin[i + 3 * trace_width + ce_blowup_factor].in[0] <== reseed[k].out;
-        ood_coin[i + 3 * trace_width + ce_blowup_factor].in[1] <== i + 1;
-        degree_adjustment_coefficients[i] <== ood_coin[i + 3 * trace_width + ce_blowup_factor].out ;
+        deep_coin[i + 3 * trace_width + ce_blowup_factor].in[0] <== reseed[k].out;
+        deep_coin[i + 3 * trace_width + ce_blowup_factor].in[1] <== i + 1;
+        degree_adjustment_coefficients[i] <== deep_coin[i + 3 * trace_width + ce_blowup_factor].out ;
     }
 
 
@@ -131,9 +162,8 @@ template PublicCoin(
         reseed[k].in[i+1] <== ood_constraint_evaluations[i];
     }
 
-
-    // FIXME: num_fri_layers | + 1 | ??
-    component fri_coin[num_fri_layers + 1] = Poseidon(2);
+    // drawing alphas for fri verification
+    component fri_coin[num_fri_layers] = Poseidon(2);
     for (var i = 0; i < num_fri_layers; i++) {
         fri_coin.in[0] <== reseed[k].out;
         fri_coin.in[1] <== i + 1;
@@ -150,6 +180,10 @@ template PublicCoin(
 
     // TODO: check proof of work
 
+
+    // drawing querypositions
+    // could be optimized to divide the number of hashes by 4, but we would also
+    // need to implement the same optimization in Winterfell.
     component query_coin[num_draws];
     component remove_duplicates = RemoveDuplicates(num_draws,num_queries)
     signal query_draws[num_draws];
@@ -159,9 +193,7 @@ template PublicCoin(
         remove_duplicates.in[i] <== query_coin[i].out;
     }
 
-
     // compute the size of the query elements in bits
-
     var bit_mask = trace_length * lde_blowup_size;
     var mask_size = 0;
     while(bit_mask != 0) {

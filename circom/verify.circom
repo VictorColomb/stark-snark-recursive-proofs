@@ -3,12 +3,62 @@ pragma circom 2.0.4;
 include "ood_consistency_check.circom";
 include "merkle.circom";
 
+/**
+ * A circom verifier for STARKs.
+ * 
+ * 
+ * 
+ * 
+ * ARGUMENTS:
+ * - ce_blowup_factor: constraint evaluation domain blowup factor.
+ * - folding_factor: FRI folding factor.
+ * - lde_blowup_factor: Low Degree Extention blowup factor .
+ * - num_assertions: number of assertions that will be turned into boundary constraints.
+ * - num_draws: number of draws needed in order to have less than a 2**-128 probability
+     to not get enough distinct elements for your queries.
+ * - num_fri_layers: number of fri folds
+ * - num_pub_coin_seed: length of the serialized public inputs and context needed
+     to initialize the public coin.
+ * - num_public_inputs: number of public inputs. Public inputs usually contain the
+     inputs and the result of the calculation
+ * - num_queries: number of decommitments for trace states and and constraint evaluations
+     to be used in DEEP polynomial composition.
+ * - num_transition_constraints: number of transitions constraints defined in the AIR.
+ * - trace_length: number of steps in the proven calculation.
+ * - trace_width: number of registers need to prove the calculations.
+ * - tree_depth: trace and commitments tree depth log2(lde_domain_size)
+ * 
+ * INPUTS:
+ * - constraint_commitment: root of the constraint merkle tree.
+ * - constraint_evaluations: constraint polynomials evaluations
+ * - constraint_query_proofs: merkle authentication paths to check consistency between
+     the commitment and the queries at pseudo-random position
+ * - fri_commitments:
+ * - fri_layer_proofs:
+ * - fri_layer_queries:
+ * - fri_remainder:
+ * - ood_constraint_evaluations: constraint out of domain evaluations to be 
+     checked during the OOD consistency check. 
+ * - ood_trace_frame: out of domain frame to evaluate constraints to check
+     consitency with the ood_constraint_evaluations. 
+ * - pub_coin_seed: serialized public inputs and context to initialize the public coin.
+ * - pow_nonce: nonce for the proof of work determined by the grinding factor in
+     the proof options.
+ * - trace_commitment: root of the trace merkle tree.
+ * - trace_evaluations: trace polynomials evaluations 
+ * - trace_query_proofs: merkle authentication paths to check consistency between
+     the commitment and the queries at pseudo-random position
+ * 
+ * TODO:
+ * - 
+ * - 
+ * - 
+ */
 template Verify(
     ce_blowup_factor,
     folding_factor,
     lde_blowup_factor,
     num_assertions,
-    num_constraint_degrees,
     num_draws,
     num_fri_layers,
     num_pub_coin_seed,
@@ -31,19 +81,11 @@ template Verify(
     signal input pub_coin_seed[num_pub_coin_seed];
     signal input pow_nonce;
     signal input trace_commitment;
-    signal input trace_query_proofs[num_queries][trace_width];
-    signal input trace_evaluations[num_queries][tree_depth];
+    signal input trace_evaluations[num_queries][trace_width];
+    signal input trace_query_proofs[num_queries][tree_depth];
 
-    component ood = OodConsistencyCheck(
-        ce_blowup_factor,
-        num_assertions,
-        num_public_inputs,
-        trace_generator,
-        trace_length,
-        trace_width
-    );
 
-    // Public coin init
+    // Public coin initialization
 
     component pub_coin = PublicCoin(
         ce_blowup_factor,
@@ -61,7 +103,7 @@ template Verify(
     for (var i = 0; i < num_pub_coin_seed; i++) {
         pub_coin.pub_coin_seed[i] <== pub_coin_seed[i];
     }
-    
+
     pub_coin.trace_commitment <== trace_commitment;
     pub_coin.constraint_commitment <== constraint_commitment;
 
@@ -82,7 +124,16 @@ template Verify(
 
 
     /* 1 - Trace commitment */
-    // build random coefficients for the composition polynomial constraint_coeffs
+    // build random coefficients for the composition polynomial constraint coeffiscients
+
+    component ood = OodConsistencyCheck(
+        ce_blowup_factor,
+        num_assertions,
+        num_public_inputs,
+        trace_generator,
+        trace_length,
+        trace_width
+    );
 
     for (var i = 0; i < num_transition_constraints; i++) {
         for (var j = 0; j < 2; j++) {
@@ -98,9 +149,12 @@ template Verify(
 
     /* 2 - Constraint commitment */
 
-    // Nothing to do here : z is drawn in the public coin and is used as pub_coin.z;
+    // Nothing to do here: z is drawn in the public coin and is used as pub_coin.z;
 
-    /* 3 - OOD consistency check :  evaluate_constraints(ood_trace_frame,constraint_coeffs) */
+
+    /* 3 - OOD consistency check: check that the given out of domain evaluation 
+       are consistent when reevaluating them.
+     */
 
 
     for (var i = 0; i < num_public_inputs; i++) {
@@ -117,11 +171,12 @@ template Verify(
     }
 
 
-    /* 4 - FRI commitment : generate DEEP coefficients */
+    /* 4 - FRI commitment: generate DEEP coefficients */
 
     // Everything is generated in the public coin 
 
-    // 5 - Trace and constraint queries : check POW, draw query positions
+
+    // 5 - Trace and constraint queries: check POW, draw query positions
 
     component traceCommitmentVerifier = VerifyMerkleOpenings(num_queries, tree_depth);
     traceCommitmentVerifier.root <== trace_commitment;
@@ -142,7 +197,7 @@ template Verify(
     }
 
 
-    // 6 - DEEP : compute DEEP at the queried positions
+    // 6 - DEEP: compute DEEP at the queried positions
 
     signal deep_composition[num_queries];
     signal deep_evaluations[num_queries];
@@ -150,7 +205,7 @@ template Verify(
     component z_m = Pow(ce_blowup_factor);
     z_m.in <== pub_coin.z;
 
-    // domain offset is hardcoded 7 to match our Winterfell config
+    // domain offset is hardcoded 7 to match our Winterfell configuration
     signal x_pow[trace_length * lde_blowup_size];
     component x_pow_domain_offset = Pow(7);
     x_pow_domain_offset.in <== g_lde;
