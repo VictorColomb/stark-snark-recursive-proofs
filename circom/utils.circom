@@ -6,17 +6,17 @@ include "./poseidon/poseidon.circom";
 
 /**
  * Exponentiation where the exponent is not a signal.
- * 
+ *
  * Usable whenever the exponent only depends on circuit parameters but not the input.
  * Always use this when possible as it will generate ~log2(exp) constraints, which is
  * much less than the exponentiation with signal.
- * 
+ *
  * ARGUMENTS:
  * - exp: the exponent to raise the input to.
- * 
+ *
  * INPUTS:
- * - in: x 
- * 
+ * - in: x
+ *
  * OUTPUTS:
  * - out: x**exp
  */
@@ -31,42 +31,42 @@ template Pow(exp) {
     var c = exp;
 
     while (c > 0 ) {
-        bits[buffer_size] = c & 1 ;
-        c\=2;
+        bits[buffer_size] = c & 1;
+        c \= 2;
         buffer_size += 1;
     }
 
     signal pow[buffer_size];
     signal inter[buffer_size];
     signal temp[buffer_size-1];
-    
+
     pow[0] <== in;
-    inter[0] <== pow[0] * bits[0] + (1 - bits[0]); 
+    inter[0] <== pow[0] * bits[0] + (1 - bits[0]);
 
     for (var i = 1; i < buffer_size; i++) {
         pow[i] <== pow[i-1] * pow[i-1];
         temp[i-1] <== pow[i] * bits[i] + (1 - bits[i]);
-        inter[i] <==  inter[i-1] * temp[i-1]; 
+        inter[i] <==  inter[i-1] * temp[i-1];
     }
 
-    out <== inter[buffer_size-1];
+    out <== inter[buffer_size - 1];
 }
 
 /**
  * Exponentiation with a signal as exponent.
- * 
+ *
  * ARGUMENTS:
  * - n: buffer size needed to convert exp in bits
- * 
+ *
  * INPUTS:
  * - in: x
  * - exp: exponent
- * 
+ *
  * OUTPUTS:
  * - out: x**exp
- * 
+ *
  * TODO:
- * -  Test if converting the n argument to a template that automates it 
+ * -  Test if converting the n argument to a template that automates it
  * -  is worth it constraint wise.
  */
 template Pow_signal(n) {
@@ -80,15 +80,15 @@ template Pow_signal(n) {
     signal pow[n];
     signal inter[n];
     signal temp[n];
-    
+
     pow[0] <== in;
     temp[0] <== pow[0] * n2b.out[0] + (1 - n2b.out[0]);
-    inter[0] <== temp[0]; 
+    inter[0] <== temp[0];
 
     for (var i = 1; i < n; i++) {
         pow[i] <== pow[i-1] * pow[i-1];
         temp[i] <== pow[i] * n2b.out[i] + (1 - n2b.out[i]);
-        inter[i] <==  inter[i-1] * temp[i]; 
+        inter[i] <==  inter[i-1] * temp[i];
     }
 
     out <== inter[n-1];
@@ -155,7 +155,7 @@ template Bits2Num(n) {
  * OUTPUTS:
  * - out: a list of output_len distinct elements from the input
  */
-template RemoveDuplicates(input_len,output_len) {
+template RemoveDuplicates(input_len, output_len) {
     signal input in[input_len];
     signal output out[output_len];
     var inter[output_len];
@@ -265,11 +265,41 @@ template Switcher() {
     outR <== R - aux;
 }
 
+/**
+ * Find the index of an element in a list.
+ * Only works if the element appears only once in the list.
+ *
+ * ARGUMENTS: choice (list length)
+ *
+ * INPUTS:
+ * - in[choices]: the list to look into
+ * - lookup: the value whose index we are looking for
+ *
+ * OUTPUTS: out
+ */
+template IndexLookup(choices) {
+    signal input in[choices];
+    signal input lookup;
+    signal output out;
+
+    component eq[choices];
+
+    var index = 0;
+    for (var i = 0; i < choices; i++) {
+        eq[i] = IsEqual();
+        eq[i].in[0] <== lookup;
+        eq[i].in[1] <== in[i];
+
+        index += i * eq[i].out;
+    }
+
+    out <== index;
+}
+
 template Selector(choices) {
     signal input in[choices];
     signal input index;
     signal output out;
-
 
     component calcTotal = CalculateTotal(choices);
     component eqs[choices];
@@ -305,34 +335,28 @@ template CalculateTotal(n) {
 }
 
 /**
- * Perform a modulo on a field element, using substractions.
+ * Perform an integer division on a field element, providing the quotient and
+ * the remainder.
  *
  * ARGUMENTS:
- * - max: the maximum number of substractions this template will perform. If
-          the field element is further away, the output will be wrong.
- * - n: the number of bits of the field elements.
+ * - M: modulo
+ * - n: the number of bits of the field element.
  *
- * INPUTS: in, modulo
- * OUTPUTS: out
+ * INPUTS: in
+ * OUTPUTS: quotient, remainder
  */
-template Modulo(max, n) {
+template IntegerDivision(M, n) {
     signal input in;
-    signal input modulo;
-    signal output out;
+    signal output quotient;
+    signal output remainder;
 
-    signal inter[max];
-    component lt[max];
+    component lt = LessThan(n);
 
-    lt[0] = LessThan(n);
-    lt[0].in[0] <== in;
-    lt[0].in[1] <== modulo;
-    inter[0] <== in - modulo * (1 - lt[0].out);
+    remainder <-- in % M;
+    quotient <-- in \ M;
 
-    for (var i = 1; i < max; i++) {
-        lt[i] = LessThan(n);
-        lt[i].in[0] <== inter[i - 1];
-        lt[i].in[1] <== modulo;
-        inter[i] <== inter[i - 1] - modulo * (1 - lt[i].out);
-    }
-    out <== inter[max - 1];
+    in === quotient * M + remainder;
+    lt.in[0] <== remainder;
+    lt.in[1] <== M;
+    lt.out === 1;
 }
