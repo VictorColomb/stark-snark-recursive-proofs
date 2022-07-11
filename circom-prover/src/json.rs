@@ -2,7 +2,7 @@ use serde_json::{json, Value};
 use winter_air::Air;
 use winter_crypto::{Digest, ElementHasher};
 use winter_fri::folding::fold_positions;
-use winter_math::{fields::f256::BaseElement, log2, FieldElement};
+use winter_math::{fields::f256::BaseElement, log2, FieldElement, StarkField};
 use winter_prover::{Serializable, StarkProof};
 
 /// Parse a [StarkProof] into a Circom-usable JSON object.
@@ -24,6 +24,7 @@ use winter_prover::{Serializable, StarkProof};
 ///
 /// ```json
 /// {
+///     "addicity": _,
 ///     "constraint_commitment": _,
 ///     "constraint_evaluations": [[_; trace_width]; num_queries],
 ///     "constraint_query_proofs": [[_; tree_depth + 1]; num_queries],
@@ -246,6 +247,7 @@ where
     }
 
     json!({
+        "addicity_root": BaseElement::TWO_ADIC_ROOT_OF_UNITY,
         "constraint_commitment": constraint_commitment,
         "constraint_evaluations": constraint_evaluations,
         "constraint_query_proofs": constraint_query_proofs,
