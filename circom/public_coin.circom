@@ -38,7 +38,7 @@ include "./utils.circom";
  */
 template PublicCoin(
     ce_blowup_factor,
-    lde_blowup_size,
+    lde_blowup_factor,
     num_assertions,
     num_draws,
     num_fri_layers,
@@ -49,20 +49,20 @@ template PublicCoin(
     trace_width
 ) {
     signal input constraint_commitment;
-    signal input fri_commitments[num_fri_layers];
+    signal input fri_commitments[num_fri_layers + 1];
     signal input ood_constraint_evaluations[ce_blowup_factor];
     signal input ood_trace_frame[2][trace_width];
     signal input pow_nonce;
     signal input pub_coin_seed[num_pub_coin_seed];
     signal input trace_commitment;
 
-    signal output transition_coeffs[num_transition_constraints][2];
     signal output boundary_coeffs[num_assertions][2];
     signal output deep_trace_coefficients[trace_width][3];
     signal output deep_constraint_coefficients[ce_blowup_factor];
     signal output degree_adjustment_coefficients[2];
     signal output layer_alphas[num_fri_layers];
     signal output query_positions[num_queries];
+    signal output transition_coeffs[num_transition_constraints][2];
     signal output z;
 
     var num_seeds = 6 + num_fri_layers;
@@ -101,6 +101,7 @@ template PublicCoin(
             boundary_coeffs[i][j] <== trace_coin[i + num_transition_constraints][j].out;
         }
     }
+
 
 
     // 2 - Reseeding with constraint commitment
@@ -181,9 +182,6 @@ template PublicCoin(
         reseed[k].prev_seed <== reseed[k-1].out;
         reseed[k].in[0] <== fri_commitments[i];
 
-        log(fri_commitments[i]);
-        log(111111111111111);
-
         fri_coin[i] = Poseidon(2);
         fri_coin[i].in[0] <== reseed[k].out;
         fri_coin[i].in[1] <== 1;
@@ -215,7 +213,7 @@ template PublicCoin(
     }
 
     // compute the size of the query elements in bits
-    var bit_mask = trace_length * lde_blowup_size;
+    var bit_mask = trace_length * lde_blowup_factor;
     var mask_size = 0;
     while(bit_mask != 0) {
         bit_mask \= 2;
@@ -232,37 +230,6 @@ template PublicCoin(
             bits2num[i].in[j] <== num2bits[i].out[j];
         }
         query_positions[i] <== bits2num[i].out;
-    }
-
-    log(0);
-    for(var k = 0; k < num_transition_constraints; k++){
-       log(transition_coeffs[k][0]);
-       log(transition_coeffs[k][1]);
-    }
-    log(1);
-    for(var k = 0; k < num_assertions; k++){
-       log(boundary_coeffs[k][0]);
-       log(boundary_coeffs[k][1]);
-    }
-    log(2);
-    log(z);
-    log(3);
-    for(var k = 0; k < num_assertions; k++){
-       log(deep_trace_coefficients[k][0]);
-       log(deep_trace_coefficients[k][1]);
-    }
-    for(var k = 0; k < ce_blowup_factor; k++){
-       log(deep_constraint_coefficients[k]);
-    }
-    log(degree_adjustment_coefficients[0]);
-    log(degree_adjustment_coefficients[1]);
-    log(4);
-    for(var k = 0; k < num_fri_layers; k++){
-       log(layer_alphas[k]);
-    }
-    log(5);
-    for(var k = 0; k < num_queries; k++){
-       log(query_positions[k]);
     }
 
 }

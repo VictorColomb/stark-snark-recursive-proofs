@@ -1,8 +1,7 @@
 pragma circom 2.0.4;
 
 include "poseidon/poseidon.circom";
-include "utils/switcher.circom";
-include "utils/bitify.circom";
+include "utils.circom";
 
 
 /**

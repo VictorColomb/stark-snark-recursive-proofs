@@ -1,6 +1,6 @@
 pragma circom 2.0.4;
 
-include "../circom/utils.circom"
+include "../circom/utils.circom";
 
 /**
  * Define how your computation transitions from one step
@@ -24,11 +24,11 @@ template BasicTransitions(trace_width) {
     // frame[0] = current | frame[1] = next
 
     // transition 0
-    out[0] <== frame[1][0] - (frame[0][0] + 1)
+    out[0] <== frame[1][0] - (frame[0][0] + 1);
     transition_degree[0] <== 1;
 
     // transition 1
-    out[1] <== frame[1][1] - (frame[0][1] + frame[0][0] + 1)
+    out[1] <== frame[1][1] - (frame[0][1] + frame[0][0] + 1);
     transition_degree[1] <== 1;
 }
 
@@ -51,14 +51,17 @@ template BasicTransitions(trace_width) {
  * - Add support for cyclic and sequence constraints.
  */
 template BasicAssertions(
-    num,assertions,
-    trace_generator,
+    num_assertions,
+    num_public_inputs,
     trace_length,
     trace_width
 ) {
 
-    signal input public_inputs[num_public_inputs];
     signal input frame[2][trace_width];
+    signal input g_trace;
+    signal input public_inputs[num_public_inputs];
+    signal input z;
+
     signal output out[num_assertions];
     signal output divisor_degree[num_assertions];
 
@@ -76,21 +79,30 @@ template BasicAssertions(
 
     value[1] <== public_inputs[0];
     step[1] <== 0;
-    register[0] <== 1;
+    register[1] <== 1;
 
     value[2] <== public_inputs[1];
     step[2] <== trace_length - 1;
-    register[0] <== 1;
+    register[2] <== 1;
 
     /* ------------------------------------- */
 
     // boundary constraints evaluation
     component pow[num_assertions];
-    for (int i = 0; i < num_assertions; i++) {
-        numerator[i] <== frame[0][register[i]] - value[i];
-        pow[i] = Pow(step[i]);
-        pow[i].in <== trace_generator;
-        out[i] <== numerator[i] / (x - pow[i].out)
+    component sel[num_assertions];
+    for (var i = 0; i < num_assertions; i++) {
+        sel[i] = Selector(trace_width);
+        for (var j = 0; j < trace_width; j++) {
+            sel[i].in[j] <== frame[0][j];
+        }
+        sel[i].index <== register[i];
+
+        numerator[i] <== sel[i].out - value[i];
+        pow[i] = Pow_signal(numbits(trace_length));
+        pow[i].in <== g_trace;
+        pow[i].exp <== step[i];
+        out[i] <-- numerator[i] / (z - pow[i].out);
+        out[i] *  (z - pow[i].out) === numerator[i];
         divisor_degree[i] <== step[i];
     }
 }

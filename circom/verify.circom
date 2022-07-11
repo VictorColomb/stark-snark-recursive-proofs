@@ -76,6 +76,7 @@ template Verify(
     signal input fri_layer_proofs[num_fri_layers][num_queries][tree_depth];
     signal input fri_layer_queries[num_fri_layers][num_queries * folding_factor];
     signal input fri_remainder[(2 ** (trace_length * lde_blowup_factor)) \ (folding_factor ** num_fri_layers)];
+    signal g_lde;
     signal input ood_constraint_evaluations[ce_blowup_factor];
     signal input ood_trace_frame[2][trace_width];
     signal input pub_coin_seed[num_pub_coin_seed];
@@ -89,7 +90,7 @@ template Verify(
 
     component pub_coin = PublicCoin(
         ce_blowup_factor,
-        lde_blowup_size,
+        lde_blowup_factor,
         num_fri_layers,
         num_assertions,
         num_draws,
@@ -164,8 +165,8 @@ template Verify(
     for (var i = 0; i < ce_blowup_factor; i++) {
         ood.channel_ood_evaluations[i] <== ood_constraint_evaluations[i];
     }
-    for (var i = 0; i < 2; i){
-        for (var j = 0; j < trace_width; j) {
+    for (var i = 0; i < 2; i++){
+        for (var j = 0; j < trace_width; j++) {
             ood.frame[i][j] <== ood_trace_frame[i][j];
         }
     }
@@ -206,12 +207,12 @@ template Verify(
     z_m.in <== pub_coin.z;
 
     // domain offset is hardcoded 7 to match our Winterfell configuration
-    signal x_pow[trace_length * lde_blowup_size];
+    signal x_pow[trace_length * lde_blowup_factor];
     component x_pow_domain_offset = Pow(7);
     x_pow_domain_offset.in <== g_lde;
     x_pow[0] <== 1;
 
-    for (var i = 1; i < trace_length * lde_blowup_size){
+    for (var i = 1; i < trace_length * lde_blowup_factor){
         x_pow[i] <== x_pow[i-1] * x_pow_domain_offset;
     }
 
@@ -221,9 +222,9 @@ template Verify(
 
     for (var i = 0; i < num_queries; i++) {
 
-        sel[i] = Selector(trace_length * lde_blowup_size);
+        sel[i] = Selector(trace_length * lde_blowup_factor);
 
-        for (var j = 0; j < trace_length * lde_blowup_size) {
+        for (var j = 0; j < trace_length * lde_blowup_factor) {
             sel[i].in[j] <== x_pow[j];
         }
 
@@ -251,7 +252,7 @@ template Verify(
 
         // final composition
 
-        deep_evaluations[i] <== (deep_composition[i] + constraint_deep_composition[i]) * (pub_coin.degree_adjustment_coefficients[0] + sel[i].out * pub_coin.degree_adjustment_coefficients[1]);
+        deep_evaluations[i] <== (deep_composition[i] + constraint_deep_composition[i]) * (pub_coin.degree_adjustment_coefficients[0] + FIXME: * pub_coin.degree_adjustment_coefficients[1]);
 
 
     }

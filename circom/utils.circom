@@ -94,6 +94,15 @@ template Pow_signal(n) {
     out <== inter[n-1];
 }
 
+function numbits(n) {
+    var k = 0;
+    while (n != 0) {
+        n\=2;
+        k+=1;
+    }
+    return k;
+}
+
 
 
 template Num2Bits(n) {
