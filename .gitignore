@@ -15,6 +15,7 @@ venv
 proof.json
 public.json
 verification_key.json
+build/
 
 #dev
 Makefile
