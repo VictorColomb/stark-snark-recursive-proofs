@@ -53,14 +53,10 @@ include "merkle.circom";
  * -
  * -
  * -
- */
-template Verify(
+ */template Verify(
     addicity,
     ce_blowup_factor,
-    domain_offset,
     folding_factor,
-    fri_num_queries,
-    fri_tree_depths,
     lde_blowup_factor,
     num_assertions,
     num_draws,
@@ -78,36 +74,26 @@ template Verify(
     signal input addicity_root;
     signal input constraint_commitment;
     signal input constraint_evaluations[num_queries][trace_width];
-    signal input constraint_query_proofs[num_queries][tree_depth];
-    signal input fri_commitments[num_fri_layers];
+    signal input constraint_query_proofs[num_queries][tree_depth + 1];
+    signal input fri_commitments[num_fri_layers+1];
     signal input fri_layer_proofs[num_fri_layers][num_queries][tree_depth + 1];
     signal input fri_layer_queries[num_fri_layers][num_queries * folding_factor];
     signal input fri_remainder[remainder_size];
     signal input ood_constraint_evaluations[ce_blowup_factor];
     signal input ood_trace_frame[2][trace_width];
     signal input pub_coin_seed[num_pub_coin_seed];
+    signal input public_inputs[num_public_inputs];
     signal input pow_nonce;
     signal input trace_commitment;
     signal input trace_evaluations[num_queries][trace_width];
     signal input trace_query_proofs[num_queries][tree_depth + 1];
 
-    signal constraint_div[num_queries][trace_width][2];
-    signal deep_composition[num_queries];
-    signal deep_evaluations[num_queries];
     signal g_lde;
     signal g_trace;
-    signal trace_div[num_queries][trace_width][2];
-    signal x_coordinates[num_queries];
-    signal x_pow[trace_length * lde_blowup_size];
 
     component addicity_pow[3];
-    component constraintCommitmentVerifier;
     component ood;
     component pub_coin;
-    component sel[num_queries];
-    component traceCommitmentVerifier;
-    component x_pow_domain_offset;
-    component z_m;
 
 
     // calculate lde domain and trace domain roots of unity
@@ -115,18 +101,17 @@ template Verify(
     addicity_pow[0].in <== addicity_root;
     addicity_pow[0].out === 1;
 
-    var log2_trace_length = numbits(trace_length);
+    var log2_trace_length = numbits(trace_length) - 1;
     assert(log2_trace_length <= addicity);
     addicity_pow[1] = Pow(2 ** (addicity - log2_trace_length));
     addicity_pow[1].in <== addicity_root;
     g_trace <== addicity_pow[1].out;
 
-    var log2_lde_domain_size = numbits(trace_length * lde_blowup_factor);
+    var log2_lde_domain_size = numbits(trace_length * lde_blowup_factor) - 1;
     assert(log2_lde_domain_size <= addicity);
     addicity_pow[2] = Pow(2 ** (addicity - log2_lde_domain_size));
     addicity_pow[2].in <== addicity_root;
     g_lde <== addicity_pow[2].out;
-
 
 
     // Public coin initialization
@@ -134,9 +119,9 @@ template Verify(
     pub_coin = PublicCoin(
         ce_blowup_factor,
         lde_blowup_factor,
-        num_fri_layers,
         num_assertions,
         num_draws,
+        num_fri_layers,
         num_pub_coin_seed,
         num_queries,
         num_transition_constraints,
@@ -144,40 +129,42 @@ template Verify(
         trace_width
     );
 
-    for (var i = 0; i < num_pub_coin_seed; i++) {
-        pub_coin.pub_coin_seed[i] <== pub_coin_seed[i];
-    }
-
-    pub_coin.trace_commitment <== trace_commitment;
     pub_coin.constraint_commitment <== constraint_commitment;
 
-    for (var i = 0; i < trace_width; i++) {
-        pub_coin.ood_trace_frame[0][i] <== ood_trace_frame[0][i];
-        pub_coin.ood_trace_frame[1][i] <== ood_trace_frame[1][i];
+    for (var i = 0; i < num_fri_layers + 1; i++) {
+        pub_coin.fri_commitments[i] <== fri_commitments[i];
     }
 
     for (var i = 0; i < ce_blowup_factor; i++) {
         pub_coin.ood_constraint_evaluations[i] <== ood_constraint_evaluations[i];
     }
 
+    for (var i = 0; i < trace_width; i++) {
+        pub_coin.ood_trace_frame[0][i] <== ood_trace_frame[0][i];
+        pub_coin.ood_trace_frame[1][i] <== ood_trace_frame[1][i];
+    }
+
     pub_coin.pow_nonce <== pow_nonce;
 
-    for (var i = 0; i < num_fri_layers; i++) {
-        pub_coin.fri_commitments[i] = fri_commitments[i];
+    for (var i = 0; i < num_pub_coin_seed; i++) {
+        pub_coin.pub_coin_seed[i] <== pub_coin_seed[i];
     }
+
+    pub_coin.trace_commitment <== trace_commitment;
 
 
     /* 1 - Trace commitment */
     // build random coefficients for the composition polynomial constraint coeffiscients
 
-    ood = OodConsistencyCheck(
+   ood = OodConsistencyCheck(
         ce_blowup_factor,
         num_assertions,
         num_public_inputs,
-        trace_generator,
         trace_length,
         trace_width
     );
+
+    ood.g_trace <== g_trace;
 
     for (var i = 0; i < num_transition_constraints; i++) {
         for (var j = 0; j < 2; j++) {

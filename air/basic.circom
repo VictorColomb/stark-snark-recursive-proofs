@@ -49,6 +49,9 @@ template BasicTransitions(trace_width) {
  *
  * TODO:
  * - Add support for cyclic and sequence constraints.
+ * - for now divisor_degree is always 1 as we only use signel constraints. See
+ * https://docs.rs/winter-air/0.4.0/winter_air/struct.ConstraintDivisor.html for
+ * for other types of divisors.
  */
 template BasicAssertions(
     num_assertions,
@@ -67,7 +70,7 @@ template BasicAssertions(
 
     signal numerator[num_assertions];
     signal value[num_assertions];
-    signal step[num_assertions];
+    signal output step[num_assertions];
     signal register[num_assertions];
 
     /* HERE YOUR ASSERTIONS HERE */
@@ -97,13 +100,8 @@ template BasicAssertions(
         }
         sel[i].index <== register[i];
 
-        numerator[i] <== sel[i].out - value[i];
-        pow[i] = Pow_signal(numbits(trace_length));
-        pow[i].in <== g_trace;
-        pow[i].exp <== step[i];
-        out[i] <-- numerator[i] / (z - pow[i].out);
-        out[i] *  (z - pow[i].out) === numerator[i];
-        divisor_degree[i] <== step[i];
+        out[i] <== sel[i].out - value[i];
+        divisor_degree[i] <== 1;
     }
 }
 

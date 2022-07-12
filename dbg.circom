@@ -54,13 +54,13 @@ template Verify(
     addicity_pow[0].in <== addicity_root;
     addicity_pow[0].out === 1;
 
-    var log2_trace_length = numbits(trace_length);
+    var log2_trace_length = numbits(trace_length) - 1;
     assert(log2_trace_length <= addicity);
     addicity_pow[1] = Pow(2 ** (addicity - log2_trace_length));
     addicity_pow[1].in <== addicity_root;
     g_trace <== addicity_pow[1].out;
 
-    var log2_lde_domain_size = numbits(trace_length * lde_blowup_factor);
+    var log2_lde_domain_size = numbits(trace_length * lde_blowup_factor) - 1;
     assert(log2_lde_domain_size <= addicity);
     addicity_pow[2] = Pow(2 ** (addicity - log2_lde_domain_size));
     addicity_pow[2].in <== addicity_root;
