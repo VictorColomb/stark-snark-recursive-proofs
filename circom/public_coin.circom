@@ -50,7 +50,7 @@ template PublicCoin(
 ) {
     signal input constraint_commitment;
     signal input fri_commitments[num_fri_layers + 1];
-    signal input ood_constraint_evaluations[ce_blowup_factor];
+    signal input ood_constraint_evaluations[trace_width];
     signal input ood_trace_frame[2][trace_width];
     signal input pow_nonce;
     signal input pub_coin_seed[num_pub_coin_seed];
@@ -58,14 +58,14 @@ template PublicCoin(
 
     signal output boundary_coeffs[num_assertions][2];
     signal output deep_trace_coefficients[trace_width][3];
-    signal output deep_constraint_coefficients[ce_blowup_factor];
+    signal output deep_constraint_coefficients[trace_width];
     signal output degree_adjustment_coefficients[2];
-    signal output layer_alphas[num_fri_layers];
+    signal output layer_alphas[num_fri_layers + 1];
     signal output query_positions[num_queries];
     signal output transition_coeffs[num_transition_constraints][2];
     signal output z;
 
-    var num_seeds = 6 + num_fri_layers;
+    var num_seeds = 6 + num_fri_layers + 1;
     component reseed[num_seeds];
     component init = Poseidon(num_pub_coin_seed);
 
@@ -142,7 +142,7 @@ template PublicCoin(
     k += 1;
     reseed[k] = Reseed(ce_blowup_factor);
     reseed[k].prev_seed <== reseed[k-1].out;
-    for (var i = 0; i < ce_blowup_factor; i++) {
+    for (var i = 0; i < trace_width; i++) {
         reseed[k].in[i] <== ood_constraint_evaluations[i];
     }
 
@@ -173,8 +173,8 @@ template PublicCoin(
 
 
     // drawing alphas for fri verification
-    component fri_coin[num_fri_layers];
-    for (var i = 0; i < num_fri_layers; i++) {
+    component fri_coin[num_fri_layers + 1];
+    for (var i = 0; i < num_fri_layers + 1; i++) {
 
         // reseeding with FRI commitments
         k += 1;
@@ -204,32 +204,33 @@ template PublicCoin(
     // need to implement the same optimization in Winterfell.
     component query_coin[num_draws];
     component remove_duplicates = RemoveDuplicates(num_draws,num_queries);
+    component num2bits[num_draws];
+    component bits2num[num_draws];
     signal query_draws[num_draws];
-    for (var i = 0; i < num_draws; i++) {
-        query_coin[i] = Poseidon(2);
-        query_coin[i].in[0] <== reseed[k].out;
-        query_coin[i].in[1] <== i + 1;
-        remove_duplicates.in[i] <== query_coin[i].out;
-    }
 
     // compute the size of the query elements in bits
     var bit_mask = trace_length * lde_blowup_factor;
     var mask_size = 0;
-    while(bit_mask != 0) {
+    while(bit_mask != 1) {
         bit_mask \= 2;
         mask_size += 1;
     }
 
-    component num2bits[num_queries];
-    component bits2num[num_queries];
-    for (var i = 0; i < num_queries; i++){
+    for (var i = 0; i < num_draws; i++) {
+        query_coin[i] = Poseidon(2);
+        query_coin[i].in[0] <== reseed[k].out;
+        query_coin[i].in[1] <== i + 1;
         num2bits[i] = Num2Bits(255);
-        num2bits[i].in <== remove_duplicates.out[i];
+        num2bits[i].in <== query_coin[i].out;
         bits2num[i] = Bits2Num(mask_size);
         for (var j = 0; j < mask_size; j++){
             bits2num[i].in[j] <== num2bits[i].out[j];
         }
-        query_positions[i] <== bits2num[i].out;
+        remove_duplicates.in[i] <== bits2num[i].out;
+    }
+
+    for (var i = 0; i < num_queries; i++){
+        query_positions[i] <== remove_duplicates.out[i];
     }
 
 }
