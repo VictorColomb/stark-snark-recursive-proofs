@@ -1,7 +1,8 @@
 pragma circom 2.0.4;
 
-include "ood_consistency_check.circom";
 include "merkle.circom";
+include "ood_consistency_check.circom";
+include "public_coin.circom";
 
 /**
  * A circom verifier for STARKs.
@@ -56,6 +57,7 @@ include "merkle.circom";
  */template Verify(
     addicity,
     ce_blowup_factor,
+    domain_offset,
     folding_factor,
     lde_blowup_factor,
     num_assertions,
@@ -79,7 +81,7 @@ include "merkle.circom";
     signal input fri_layer_proofs[num_fri_layers][num_queries][tree_depth + 1];
     signal input fri_layer_queries[num_fri_layers][num_queries * folding_factor];
     signal input fri_remainder[remainder_size];
-    signal input ood_constraint_evaluations[ce_blowup_factor];
+    signal input ood_constraint_evaluations[trace_width];
     signal input ood_trace_frame[2][trace_width];
     signal input pub_coin_seed[num_pub_coin_seed];
     signal input public_inputs[num_public_inputs];
@@ -88,12 +90,27 @@ include "merkle.circom";
     signal input trace_evaluations[num_queries][trace_width];
     signal input trace_query_proofs[num_queries][tree_depth + 1];
 
+    signal constraint_div[num_queries][trace_width];
+    signal constraint_evalxcoeff[num_queries][trace_width];
+    signal deep_composition[num_queries];
+    signal deep_deg_adjustment[num_queries];
+    signal deep_evaluations[num_queries];
+    signal deep_temp[num_queries][trace_width];
     signal g_lde;
     signal g_trace;
+    signal trace_deep_composition[num_queries][trace_width][2];
+    signal trace_div[num_queries][trace_width][2];
+    signal x_coordinates[num_queries];
+    signal x_pow[trace_length * lde_blowup_factor];
 
     component addicity_pow[3];
+    component constraintCommitmentVerifier;
     component ood;
     component pub_coin;
+    component sel[num_queries];
+    component traceCommitmentVerifier;
+    component x_pow_domain_offset;
+    component z_m;
 
 
     // calculate lde domain and trace domain roots of unity
@@ -135,7 +152,7 @@ include "merkle.circom";
         pub_coin.fri_commitments[i] <== fri_commitments[i];
     }
 
-    for (var i = 0; i < ce_blowup_factor; i++) {
+    for (var i = 0; i < trace_width; i++) {
         pub_coin.ood_constraint_evaluations[i] <== ood_constraint_evaluations[i];
     }
 
@@ -192,7 +209,7 @@ include "merkle.circom";
         ood.public_inputs[i] <== public_inputs[i];
     }
     ood.z <== pub_coin.z;
-    for (var i = 0; i < ce_blowup_factor; i++) {
+    for (var i = 0; i < trace_width; i++) {
         ood.channel_ood_evaluations[i] <== ood_constraint_evaluations[i];
     }
     for (var i = 0; i < 2; i++){
@@ -207,12 +224,13 @@ include "merkle.circom";
     // Everything is generated in the public coin
 
 
+
     // 5 - Trace and constraint queries: check POW, draw query positions
 
     traceCommitmentVerifier = MerkleOpeningsVerify(num_queries, tree_depth);
     traceCommitmentVerifier.root <== trace_commitment;
     for (var i = 0; i < num_queries; i++) {
-        traceCommitmentVerifier.indexes[i] <== pub_coin.query_indexes[i];
+        traceCommitmentVerifier.indexes[i] <== pub_coin.query_positions[i];
         for (var j = 0; j <= tree_depth; j++) {
             traceCommitmentVerifier.openings[i][j] <== trace_query_proofs[i][j];
         }
@@ -221,7 +239,7 @@ include "merkle.circom";
     constraintCommitmentVerifier = MerkleOpeningsVerify(num_queries, tree_depth);
     constraintCommitmentVerifier.root <== constraint_commitment;
     for (var i = 0; i < num_queries; i++) {
-        constraintCommitmentVerifier.indexes[i] <== pub_coin.query_indexes[i];
+        constraintCommitmentVerifier.indexes[i] <== pub_coin.query_positions[i];
         for (var j = 0; j <= tree_depth; j++) {
             constraintCommitmentVerifier.openings[i][j] <== constraint_query_proofs[i][j];
         }
@@ -233,53 +251,67 @@ include "merkle.circom";
     z_m = Pow(ce_blowup_factor);
     z_m.in <== pub_coin.z;
 
-    // domain offset is hardcoded 7 to match our Winterfell configuration
-    x_pow_domain_offset = Pow(domain_offset);
-    x_pow_domain_offset.in <== g_lde;
     x_pow[0] <== 1;
 
-    for (var i = 1; i < trace_length * lde_blowup_factor){
-        x_pow[i] <== x_pow[i-1] * x_pow_domain_offset;
+    for (var i = 1; i < trace_length * lde_blowup_factor; i++){
+        x_pow[i] <== x_pow[i-1] * g_lde;
     }
 
     for (var i = 0; i < num_queries; i++) {
 
         sel[i] = Selector(trace_length * lde_blowup_factor);
 
-        for (var j = 0; j < trace_length * lde_blowup_factor) {
-            sel[i].in[j] <== x_pow[j];
+        for (var j = 0; j < trace_length * lde_blowup_factor; j++) {
+            sel[i].in[j] <== x_pow[j] * domain_offset;
         }
 
-        sel[i].index <== query_positions[i];
+        sel[i].index <== pub_coin.query_positions[i];
 
 
-        var result = 0;
         for (var j = 0; j < trace_width; j++) {
 
             // DEEP trace composition
-            trace_div[i][j][0] <-- (queried_trace_evaluations[i] - ood_trace_frame[0][i]) / (sel[i].out - pub_coin.z);
-            trace_div[i][j][0] * (sel[i].out - pub_coin.z) === queried_trace_evaluations[i] - ood_trace_frame[0][i];
+            trace_div[i][j][0] <-- (trace_evaluations[i][j] - ood_trace_frame[0][j]) / (sel[i].out - pub_coin.z);
+            trace_div[i][j][0] * (sel[i].out - pub_coin.z) === trace_evaluations[i][j] - ood_trace_frame[0][j];
 
-            trace_div[i][j][1] <-- (queried_trace_evaluations[i] - ood_trace_frame[1][i]) / (sel[i].out - pub_coin.z * g_trace);
-            trace_div[i][j][1] * (sel[i].out - pub_coin.z) === queried_trace_evaluations[i] - ood_trace_frame[1][i];
+
+            deep_temp[i][j] <== sel[i].out - pub_coin.z * g_trace;
+            trace_div[i][j][1] <-- (trace_evaluations[i][j] - ood_trace_frame[1][j]) / deep_temp[i][j];
+            trace_div[i][j][1] * deep_temp[i][j] === trace_evaluations[i][j] - ood_trace_frame[1][j];
+
+            trace_deep_composition[i][j][0] <== pub_coin.deep_trace_coefficients[j][0] * trace_div[i][j][0];
 
             // DEEP constraint composition
-            constraint_div[i] <-- (constraint_evaluations[i] - ood_constraint_evaluations[i]) / (sel[i].out - z_m);
-            constraint_div[i]  * (sel[i].out - z_m) ===  constraint_evaluations[i] - ood_constraint_evaluations[i];
+           
+            if (j == 0) {
 
-            result += pub_coin.deep_trace_coefficients[j][0] * trace_div[i][j][0] + pub_coin.deep_trace_coefficients[j][1] * trace_div[i][j][1] + constraint_div[i] * pub_coin.deep_constraint_coefficients[i];
+                trace_deep_composition[i][j][1] <== trace_deep_composition[i][j][0]+ pub_coin.deep_trace_coefficients[j][1] * trace_div[i][j][1];
+
+                constraint_div[i][j] <-- (constraint_evaluations[i][j] - ood_constraint_evaluations[j]) / (sel[i].out - z_m.out);
+                constraint_div[i][j]  * (sel[i].out - z_m.out) ===  constraint_evaluations[i][j] - ood_constraint_evaluations[j];
+                constraint_evalxcoeff[i][j] <== constraint_div[i][j] * pub_coin.deep_constraint_coefficients[j];
+                
+            } else {
+
+                trace_deep_composition[i][j][1] <== trace_deep_composition[i][j-1][1] + trace_deep_composition[i][j][0]+ pub_coin.deep_trace_coefficients[j][1] * trace_div[i][j][1];
+                
+                constraint_div[i][j] <-- (constraint_evaluations[i][j] - ood_constraint_evaluations[j]) / (sel[i].out - z_m.out);
+                (constraint_div[i][j])  * (sel[i].out - z_m.out) ===  constraint_evaluations[i][j] - ood_constraint_evaluations[j];
+                constraint_evalxcoeff[i][j] <== constraint_evalxcoeff[i][j-1] + constraint_div[i][j] * pub_coin.deep_constraint_coefficients[j];
+                
+            }
+
         }
-
-        deep_composition[i] <== result;
+        
+        deep_composition[i] <== trace_deep_composition[i][trace_width -1][1] + constraint_evalxcoeff[i][trace_width -1];
 
         // final composition
-
-        deep_evaluations[i] <== (deep_composition[i] + constraint_deep_composition[i]) * (pub_coin.degree_adjustment_coefficients[0] + FIXME: * pub_coin.degree_adjustment_coefficients[1]);
-
+        deep_deg_adjustment[i] <== pub_coin.degree_adjustment_coefficients[0] + sel[i].out * pub_coin.degree_adjustment_coefficients[1];
+        deep_evaluations[i] <== deep_composition[i] * deep_deg_adjustment[i];
 
     }
 
-
+ 
     // 7 - FRI verification
 
 }
