@@ -33,7 +33,7 @@ template OodConsistencyCheck(
     trace_width
 ) {
     signal input boundary_coeffs[num_assertions][2];
-    signal input channel_ood_evaluations[ce_blowup_factor];
+    signal input channel_ood_evaluations[trace_width];
     signal input frame[2][trace_width];
     signal input g_trace;
     signal input public_inputs[num_public_inputs];
@@ -142,10 +142,10 @@ template OodConsistencyCheck(
     // a single value by computing sum(z^i * value_i), where value_i is the evaluation of the ith
     // column polynomial at z^m, where m is the total number of column polynomials
 
-    signal channel_ood_pow[ce_blowup_factor];
+    signal channel_ood_pow[trace_width ];
     channel_ood_pow[0] <== 1;
     var channel_result = channel_ood_evaluations[0] ;
-    for (var i = 1; i < ce_blowup_factor; i++) {
+    for (var i = 1; i < trace_width; i++) {
         channel_ood_pow[i] <== z * channel_ood_pow[i-1];
         channel_result += channel_ood_evaluations[i] * channel_ood_pow[i];
     }
