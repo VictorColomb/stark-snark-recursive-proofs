@@ -59,6 +59,7 @@ include "public_coin.circom";
     ce_blowup_factor,
     domain_offset,
     folding_factor,
+    grinding_factor,
     lde_blowup_factor,
     num_assertions,
     num_draws,
@@ -135,6 +136,7 @@ include "public_coin.circom";
 
     pub_coin = PublicCoin(
         ce_blowup_factor,
+        grinding_factor,
         lde_blowup_factor,
         num_assertions,
         num_draws,

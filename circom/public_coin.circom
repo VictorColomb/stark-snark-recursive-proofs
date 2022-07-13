@@ -38,6 +38,7 @@ include "./utils.circom";
  */
 template PublicCoin(
     ce_blowup_factor,
+    grinding_factor,
     lde_blowup_factor,
     num_assertions,
     num_draws,
@@ -196,8 +197,12 @@ template PublicCoin(
     reseed[k].prev_seed <== reseed[k-1].out;
     reseed[k].in[0] <== pow_nonce;
 
-    // TODO: check proof of work
-
+    // check proof of work
+    component pow_num2bit = Num2Bits(255);
+    pow_num2bit.in <== reseed[k].out;
+    for (var i = 0; i < grinding_factor; i++) {
+        pow_num2bit.out[i] === 0;
+    }
 
     // drawing querypositions
     // could be optimized to divide the number of hashes by 4, but we would also
@@ -255,4 +260,5 @@ template Reseed(input_len) {
         hash.in[1] <== hash_data.out;
     }
     out <== hash.out;
+
 }

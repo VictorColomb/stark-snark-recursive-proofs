@@ -411,7 +411,6 @@ def calc_equivalent_matrices(MDS):
 
     t = NUM_CELLS
 
-    #FIXME: MDS_matrix_field_transpose??
     MDS_matrix_field_transpose = MDS.transpose()
 
     w_hat_collection = []
@@ -457,7 +456,6 @@ def calc_equivalent_constants(constants,MDS):
     t = NUM_CELLS
     constants_temp = [constants[index:index+t] for index in range(0, len(constants), t)]
 
-    #FIXME: MDS_matrix_field_transpose??
     MDS_matrix_field_transpose = MDS.transpose()
 
     # Start moving round constants up

@@ -1,5 +1,3 @@
-// TODO: find a faster exponentiation implementation
-
 pragma circom 2.0.4;
 
 include "./poseidon/poseidon.circom";
