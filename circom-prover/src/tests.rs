@@ -1,7 +1,11 @@
+use std::fs;
+
 use winter_air::{Air, FieldExtension, HashFunction, ProofOptions};
+use winter_circom_prover::number_of_draws;
 use winter_crypto::{hashers::Poseidon, MerkleTree};
 use winter_math::{fields::f256::BaseElement, FieldElement};
 use winter_prover::{Prover, StarkProof};
+use winter_verifier::verify;
 
 use super::{WorkAir, WorkProver};
 
@@ -63,6 +67,48 @@ fn trace_query_proofs() {
         );
     }
 }
+
+
+#[test]
+fn test_verif() {
+
+    // computation parameters
+    let start = BaseElement::ONE;
+    let n = 256;
+
+    // Define proof options; these will be enough for ~96-bit security level.
+    let options = ProofOptions::new(
+        32, // number of queries
+        8,  // lde blowup factor
+        0,  // grinding factor
+        HashFunction::Poseidon,
+        FieldExtension::None,
+        8,   // FRI folding factor
+        128, // FRI max remainder length
+    );
+
+    // build proof
+    let prover = WorkProver::new(options);
+    let trace = prover.build_trace(start, n);
+    let pub_inputs = prover.get_pub_inputs(&trace);
+
+    let bytes = fs::read("../proof").expect("Something went wrong reading the file");
+
+    let proof = StarkProof::from_bytes(bytes.as_slice()).unwrap();
+
+    //proof.trace_queries[0] = ;
+
+    assert!(
+        verify::<WorkAir>(proof, pub_inputs.clone()).is_ok(),
+        "invalid proof"
+    );
+}
+
+#[test]
+fn test_num_draws() {
+    assert_eq!(number_of_draws(32, 128,128) , 111);
+}
+
 
 // HELPER FUNCTIONS
 // ===========================================================================
