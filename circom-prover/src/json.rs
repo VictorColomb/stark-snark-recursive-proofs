@@ -17,7 +17,7 @@ use winter_prover::{Serializable, StarkProof};
 /// ```text
 /// fri_layer_proofs[i].len() = fri_num_queries[i]
 /// fri_layer_proofs[i][j].len() = fri_tree_depths[i]
-/// fri_layer_queries[i].len() = fri_num_queries[i]` * folding_factor
+/// fri_layer_queries[i].len() = fri_num_queries[i] * folding_factor
 /// ```
 ///
 /// ## JSON structure
@@ -27,7 +27,7 @@ use winter_prover::{Serializable, StarkProof};
 ///     "addicity": _,
 ///     "constraint_commitment": _,
 ///     "constraint_evaluations": [[_; trace_width]; num_queries],
-///     "constraint_query_proofs": [[_; tree_depth + 1]; num_queries],
+///     "constraint_query_proofs": [[_; tree_depth]; num_queries],
 ///     "fri_commitments": [num_fri_layers + 1],
 ///     "fri_layer_proofs": [[[_; tree_depth + 1]; num_queries]; num_fri_layers],
 ///     "fri_layer_queries": [[_; num_queries * folding_factor]; num_fri_layers],
@@ -38,7 +38,7 @@ use winter_prover::{Serializable, StarkProof};
 ///     "pub_coin_seed": [_; num_pub_coin_seed]
 ///     "trace_commitment": _,
 ///     "trace_evaluations": [[_; trace_width]; num_queries],
-///     "trace_query_proofs": [[tree_depth + 1]; num_queries],
+///     "trace_query_proofs": [[tree_depth]; num_queries],
 /// }
 /// ```
 pub fn proof_to_json<AIR, H>(

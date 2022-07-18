@@ -348,8 +348,7 @@ impl<H: Hasher> BatchMerkleProof<H> {
             .map(|mut index| {
                 let mut path: Vec<H::Digest> = Vec::with_capacity(self.depth as usize + 1);
 
-                // add leaves
-                path.push(leaves[index]);
+                // add sibling leaf
                 path.push(leaves[index ^ 1]);
                 index = (index + n) >> 1;
 
