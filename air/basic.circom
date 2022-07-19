@@ -104,5 +104,3 @@ template BasicAssertions(
         divisor_degree[i] <== 1;
     }
 }
-
-

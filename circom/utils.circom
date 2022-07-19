@@ -28,7 +28,7 @@ template Pow(exp) {
     var bits[255];
     var c = exp;
 
-    while (c > 0 ) {
+    while (c != 0) {
         bits[buffer_size] = c & 1;
         c \= 2;
         buffer_size += 1;
@@ -106,14 +106,14 @@ function numbits(n) {
 template Num2Bits(n) {
     signal input in;
     signal output out[n];
-    var lc1=0;
+    var lc1 = 0;
 
-    var e2=1;
-    for (var i = 0; i<n; i++) {
+    var e2 = 1;
+    for (var i = 0; i < n; i++) {
         out[i] <-- (in >> i) & 1;
-        out[i] * (out[i] -1 ) === 0;
+        out[i] * (out[i] - 1) === 0;
         lc1 += out[i] * e2;
-        e2 = e2+e2;
+        e2 = e2 + e2;
     }
 
     lc1 === in;
@@ -274,6 +274,8 @@ template Switcher() {
  * - lookup: the value whose index we are looking for
  *
  * OUTPUTS: out
+ *
+ * TODO: create MultiIndexLookup
  */
 template IndexLookup(choices) {
     signal input in[choices];
@@ -294,7 +296,7 @@ template IndexLookup(choices) {
     out <== index;
 }
 
-template MultiSelector(len_input,num_indexes) {
+template MultiSelector(len_input, num_indexes) {
     signal input in[len_input];
     signal input indexes[num_indexes];
     signal output out[num_indexes];
