@@ -1,10 +1,9 @@
 //! An implementation of a 256-bit STARK-friendly prime field with the modulus being the order of
-//! the sub-group of curve BLS12-381 - namely 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001.
+//! the sub-group of curve NB128 - namely 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001.
 //!
-//! Operations in this field are implemented using Barret reduction and are stored in their
-//! canonical form using [U256] as the backing type. However, this field was not chosen with any
-//! significant thought given to performance, and the implementations of most operations are
-//! sub-optimal as well.
+//! Elements of this field are stored in their canonical form using [U256] as the backing type.
+//! However, this field was not chosen with any significant thought given to performance, and
+//! the implementations of most operations are sub-optimal as well.
 
 use super::{ExtensibleField, FieldElement, StarkField};
 use core::{
@@ -28,20 +27,20 @@ mod tests;
 // CONSTANTS
 // ================================================================================================
 
-// Field modulus = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+// Field modulus = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
 const M: U256 = U256([
-    18446744069414584321,
-    6034159408538082302,
-    3691218898639771653,
-    8353516859464449352,
+    4891460686036598785,
+    2896914383306846353,
+    13281191951274694749,
+    3486998266802970665,
 ]);
 
-// 2^32 root of unity = 0x16a2a19edfe81f20d09b681922c813b4b63683508c2280b93829971f439f0d2b
+// 2^32 root of unity = 0x2a3c09f0a58a7e8500e0a7eb8ef62abc402d111e41112ed49bd61b6e725b19f0
 const G: U256 = U256([
-    4046931900703378731,
-    13129826145616953529,
-    15031722638446171060,
-    1631043718794977056,
+    11229192882073836016,
+    4624371214017703636,
+    63235024940837564,
+    3043318377369730693,
 ]);
 
 // Number of bytes needed to represent field element
@@ -126,9 +125,9 @@ impl StarkField for BaseElement {
 
     const MODULUS_BITS: u32 = 256;
 
-    const GENERATOR: Self = BaseElement(U256([7, 0, 0, 0]));
+    const GENERATOR: Self = BaseElement(U256([5, 0, 0, 0]));
 
-    const TWO_ADICITY: u32 = 32;
+    const TWO_ADICITY: u32 = 28;
     const TWO_ADIC_ROOT_OF_UNITY: Self = BaseElement(G);
 
     fn get_modulus_le_bytes() -> Vec<u8> {

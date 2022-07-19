@@ -1,4 +1,3 @@
-use serde_json::json;
 use std::fs::File;
 use std::io::Write;
 use winter_air::Air;
@@ -61,7 +60,7 @@ fn main() {
 
     let mut fri_num_queries = Vec::new();
     let mut fri_tree_depths = Vec::new();
-    let mut json = proof_to_json::<WorkAir, Poseidon<BaseElement>>(
+    let json = proof_to_json::<WorkAir, Poseidon<BaseElement>>(
         proof.clone(),
         &air,
         &query_positions,
@@ -69,8 +68,6 @@ fn main() {
         &mut fri_num_queries,
         &mut fri_tree_depths,
     );
-
-    json["public_inputs"] = json!([pub_inputs.start, pub_inputs.result]);
 
     // PRINT TO FILE
     // ===========================================================================
@@ -82,6 +79,9 @@ fn main() {
     // CIRCOM MAIN
     // ===========================================================================
 
+    let fri_num_queries = format!("[{}]", fri_num_queries.iter().map(|x| format!("{}", x)).collect::<Vec<_>>().join(","));
+    let fri_tree_depths = format!("[{}]", fri_tree_depths.iter().map(|x| format!("{}", x)).collect::<Vec<_>>().join(","));
+
     let mut file = File::create("verifier_main.circom").unwrap();
 
     file.write("pragma circom 2.0.4;\n\n".as_bytes()).unwrap();
@@ -90,11 +90,13 @@ fn main() {
     file.write("component main = Verify(\n".as_bytes()).unwrap();
     file.write(
         format!(
-            "    {}, // addicity\n    {}, // ce_blowup_factor\n    {}, // domain_offset\n    {}, // folding_factor\n    {}, // grinding_factor\n    {}, // lde_blowup_factor\n    {}, // num_assertions\n    {}, // num_draws\n    {}, // num_fri_layers\n    {}, // num_pub_coin_seed\n    {}, // num_public_inputs\n    {}, // num_queries\n    {}, // num_transition_constraints\n    {}, // trace_length\n    {},  // trace_length\n    {}, // tree_depth\n);",
+            "    {}, // addicity\n    {}, // ce_blowup_factor\n    {}, // domain_offset\n    {}, // folding_factor\n    {}, // fri_num_queries\n    {}, // fri_tree_depth\n    {}, // grinding_factor\n    {}, // lde_blowup_factor\n    {}, // num_assertions\n    {}, // num_draws\n    {}, // num_fri_layers\n    {}, // num_pub_coin_seed\n    {}, // num_public_inputs\n    {}, // num_queries\n    {}, // num_transition_constraints\n    {}, // trace_length\n    {},  // trace_length\n    {} // tree_depth\n);",
             f256::BaseElement::TWO_ADICITY,
             air.ce_blowup_factor(),
             air.domain_offset(),
             air.options().to_fri_options().folding_factor(),
+            fri_num_queries,
+            fri_tree_depths,
             air.options().grinding_factor(),
             air.options().blowup_factor(),
             air.context().num_assertions(),

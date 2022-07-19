@@ -3,7 +3,7 @@ bn-128 := 2188824287183927522224640574525727508854836440041603434369820418657580
 dbg_p := 18446744073709551359
 
 bn_constants:
-	python3 generate_parameters_grain.sage.py 1 0 254 5 8 60 ${bn-128} > param.rs
+	python3 generate_parameters_grain.sage.py 1 0 254 4 8 58 ${bn-128} > param.rs
 
 bls_constants:
 	python3 generate_parameters_grain.sage.py 1 0 255 5 8 60 ${bls12-381} > param.rs

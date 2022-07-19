@@ -1,3 +1,4 @@
+use serde::{Serialize, ser::SerializeTuple};
 use winter_air::{
     Air, AirContext, Assertion, EvaluationFrame, ProofOptions, TraceInfo,
     TransitionConstraintDegree,
@@ -11,6 +12,19 @@ pub struct PublicInputs {
     pub start: BaseElement,
     pub result: BaseElement,
 }
+
+impl Serialize for PublicInputs {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_tuple(2)?;
+        state.serialize_element(&self.start)?;
+        state.serialize_element(&self.result)?;
+        state.end()
+    }
+}
+
 
 impl Serializable for PublicInputs {
     fn write_into<W: ByteWriter>(&self, target: &mut W) {

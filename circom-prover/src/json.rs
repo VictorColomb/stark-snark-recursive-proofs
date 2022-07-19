@@ -1,3 +1,4 @@
+use serde::Serialize;
 use serde_json::{json, Value};
 use winter_air::Air;
 use winter_crypto::{Digest, ElementHasher};
@@ -29,13 +30,14 @@ use winter_prover::{Serializable, StarkProof};
 ///     "constraint_evaluations": [[_; trace_width]; num_queries],
 ///     "constraint_query_proofs": [[_; tree_depth]; num_queries],
 ///     "fri_commitments": [num_fri_layers + 1],
-///     "fri_layer_proofs": [[[_; tree_depth + 1]; num_queries]; num_fri_layers],
+///     "fri_layer_proofs": [[[_; tree_depth]; num_queries]; num_fri_layers],
 ///     "fri_layer_queries": [[_; num_queries * folding_factor]; num_fri_layers],
 ///     "fri_remainder": [_; lde_domain_size / (folding_factor ** num_fri_layers)],
 ///     "ood_constraint_evaluations": [_; ce_blowup_factor],
 ///     "ood_trace_frame": [[_; trace_width]; 2],
 ///     "pow_nonce": _,
-///     "pub_coin_seed": [_; num_pub_coin_seed]
+///     "pub_coin_seed": [_; num_pub_coin_seed],
+///     "public_inputs": [_; num_public_inputs],
 ///     "trace_commitment": _,
 ///     "trace_evaluations": [[_; trace_width]; num_queries],
 ///     "trace_query_proofs": [[tree_depth]; num_queries],
@@ -51,6 +53,7 @@ pub fn proof_to_json<AIR, H>(
 ) -> Value
 where
     AIR: Air,
+    <AIR as Air>::PublicInputs: Serialize,
     H: ElementHasher<BaseField = BaseElement>,
 {
     let StarkProof {
@@ -228,12 +231,12 @@ where
             fri_tree_depths.push(paths[0].len());
 
             for path in paths.iter_mut() {
-                while path.len() <= tree_depth {
+                while path.len() < tree_depth {
                     path.push(BaseElement::ZERO);
                 }
             }
             while paths.len() < num_queries {
-                paths.push(vec![BaseElement::ZERO; tree_depth + 1]);
+                paths.push(vec![BaseElement::ZERO; tree_depth]);
             }
             paths
         })
@@ -259,6 +262,7 @@ where
         "ood_trace_frame": ood_trace_frame,
         "pow_nonce": pow_nonce,
         "pub_coin_seed": pub_coin_seed,
+        "public_inputs": pub_inputs,
         "trace_commitment": trace_commitment,
         "trace_evaluations": trace_evaluations,
         "trace_query_proofs": trace_query_proofs,
