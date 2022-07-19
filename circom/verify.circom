@@ -108,7 +108,7 @@ include "public_coin.circom";
     component constraintCommitmentVerifier;
     component ood;
     component pub_coin;
-    component sel[num_queries];
+    component multi_sel;
     component traceCommitmentVerifier;
     component x_pow_domain_offset;
     component z_m;
@@ -253,31 +253,31 @@ include "public_coin.circom";
     z_m = Pow(ce_blowup_factor);
     z_m.in <== pub_coin.z;
 
+    multi_sel = MultiSelector(trace_length * lde_blowup_factor, num_queries);
+
     x_pow[0] <== 1;
+    multi_sel.in[0] <== 1;
 
     for (var i = 1; i < trace_length * lde_blowup_factor; i++){
         x_pow[i] <== x_pow[i-1] * g_lde;
+        multi_sel.in[i] <== x_pow[i] * domain_offset;
+    }
+
+    for(var i = 0; i < num_queries; i ++) {
+        multi_sel.indexes[i] <== pub_coin.query_positions[i];
     }
 
     for (var i = 0; i < num_queries; i++) {
-
-        sel[i] = Selector(trace_length * lde_blowup_factor);
-
-        for (var j = 0; j < trace_length * lde_blowup_factor; j++) {
-            sel[i].in[j] <== x_pow[j] * domain_offset;
-        }
-
-        sel[i].index <== pub_coin.query_positions[i];
 
 
         for (var j = 0; j < trace_width; j++) {
 
             // DEEP trace composition
-            trace_div[i][j][0] <-- (trace_evaluations[i][j] - ood_trace_frame[0][j]) / (sel[i].out - pub_coin.z);
-            trace_div[i][j][0] * (sel[i].out - pub_coin.z) === trace_evaluations[i][j] - ood_trace_frame[0][j];
+            trace_div[i][j][0] <-- (trace_evaluations[i][j] - ood_trace_frame[0][j]) / (multi_sel.out[i] - pub_coin.z);
+            trace_div[i][j][0] * (multi_sel.out[i] - pub_coin.z) === trace_evaluations[i][j] - ood_trace_frame[0][j];
 
 
-            deep_temp[i][j] <== sel[i].out - pub_coin.z * g_trace;
+            deep_temp[i][j] <== multi_sel.out[i] - pub_coin.z * g_trace;
             trace_div[i][j][1] <-- (trace_evaluations[i][j] - ood_trace_frame[1][j]) / deep_temp[i][j];
             trace_div[i][j][1] * deep_temp[i][j] === trace_evaluations[i][j] - ood_trace_frame[1][j];
 
@@ -289,16 +289,16 @@ include "public_coin.circom";
 
                 trace_deep_composition[i][j][1] <== trace_deep_composition[i][j][0]+ pub_coin.deep_trace_coefficients[j][1] * trace_div[i][j][1];
 
-                constraint_div[i][j] <-- (constraint_evaluations[i][j] - ood_constraint_evaluations[j]) / (sel[i].out - z_m.out);
-                constraint_div[i][j]  * (sel[i].out - z_m.out) ===  constraint_evaluations[i][j] - ood_constraint_evaluations[j];
+                constraint_div[i][j] <-- (constraint_evaluations[i][j] - ood_constraint_evaluations[j]) / (multi_sel.out[i] - z_m.out);
+                constraint_div[i][j]  * (multi_sel.out[i] - z_m.out) ===  constraint_evaluations[i][j] - ood_constraint_evaluations[j];
                 constraint_evalxcoeff[i][j] <== constraint_div[i][j] * pub_coin.deep_constraint_coefficients[j];
                 
             } else {
 
                 trace_deep_composition[i][j][1] <== trace_deep_composition[i][j-1][1] + trace_deep_composition[i][j][0]+ pub_coin.deep_trace_coefficients[j][1] * trace_div[i][j][1];
                 
-                constraint_div[i][j] <-- (constraint_evaluations[i][j] - ood_constraint_evaluations[j]) / (sel[i].out - z_m.out);
-                (constraint_div[i][j])  * (sel[i].out - z_m.out) ===  constraint_evaluations[i][j] - ood_constraint_evaluations[j];
+                constraint_div[i][j] <-- (constraint_evaluations[i][j] - ood_constraint_evaluations[j]) / (multi_sel.out[i] - z_m.out);
+                (constraint_div[i][j])  * (multi_sel.out[i] - z_m.out) ===  constraint_evaluations[i][j] - ood_constraint_evaluations[j];
                 constraint_evalxcoeff[i][j] <== constraint_evalxcoeff[i][j-1] + constraint_div[i][j] * pub_coin.deep_constraint_coefficients[j];
                 
             }
@@ -308,7 +308,7 @@ include "public_coin.circom";
         deep_composition[i] <== trace_deep_composition[i][trace_width -1][1] + constraint_evalxcoeff[i][trace_width -1];
 
         // final composition
-        deep_deg_adjustment[i] <== pub_coin.degree_adjustment_coefficients[0] + sel[i].out * pub_coin.degree_adjustment_coefficients[1];
+        deep_deg_adjustment[i] <== pub_coin.degree_adjustment_coefficients[0] + multi_sel.out[i] * pub_coin.degree_adjustment_coefficients[1];
         deep_evaluations[i] <== deep_composition[i] * deep_deg_adjustment[i];
 
     }

@@ -294,27 +294,63 @@ template IndexLookup(choices) {
     out <== index;
 }
 
-template Selector(choices) {
-    signal input in[choices];
+template MultiSelector(len_input,num_indexes) {
+    signal input in[len_input];
+    signal input indexes[num_indexes];
+    signal output out[num_indexes];
+
+    signal sum[num_indexes][len_input];
+    component eqs[num_indexes][len_input];
+
+    for(var k = 0; k < num_indexes; k++) {
+
+        // For each item, check whether its index equals the input index.
+        for (var i = 0; i < len_input; i ++) {
+            eqs[k][i] = IsEqual();
+            eqs[k][i].in[0] <== i;
+            eqs[k][i].in[1] <== indexes[k];
+
+            // eqs[k][i].out is 1 if the index matches. As such, at most one input to
+            // calcTotal is not 0.
+            if (i == 0) {
+                sum[k][i] <== eqs[k][i].out * in[i];
+            } else {
+                sum[k][i] <== sum[k][i - 1] + eqs[k][i].out * in[i];
+            }
+        }
+
+        // Returns 0 + 0 + 0 + item
+        out[k] <== sum[k][len_input - 1];
+
+        }
+}
+
+template Selector(len_input) {
+    signal input in[len_input];
     signal input index;
     signal output out;
 
-    component calcTotal = CalculateTotal(choices);
-    component eqs[choices];
+    signal sum[len_input];
+    component eqs[len_input];
 
     // For each item, check whether its index equals the input index.
-    for (var i = 0; i < choices; i ++) {
+    for (var i = 0; i < len_input; i ++) {
         eqs[i] = IsEqual();
         eqs[i].in[0] <== i;
         eqs[i].in[1] <== index;
 
         // eqs[i].out is 1 if the index matches. As such, at most one input to
         // calcTotal is not 0.
-        calcTotal.in[i] <== eqs[i].out * in[i];
+        if (i == 0) {
+            sum[i] <== eqs[i].out * in[i];
+        } else {
+            sum[i] <== sum[i - 1] + eqs[i].out * in[i];
+        }
     }
 
     // Returns 0 + 0 + 0 + item
-    out <== calcTotal.out;
+    out <== sum[len_input - 1];
+
 }
 
 template CalculateTotal(n) {
