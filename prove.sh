@@ -111,7 +111,7 @@ then
 		then
 			VERBOSE_CIRCOM="--verbose"
 		fi
-		circom "../../${TARGET_INPUT}.circom" -p bls12381 --r1cs --sym --c $VERBOSE_CIRCOM
+		circom "../../${TARGET_INPUT}.circom" --r1cs --sym --c $VERBOSE_CIRCOM
 		[ ! -f ${TARGET}.r1cs ] && exit 1
 		[ ! -d ${TARGET}_cpp ] && exit 1
 	fi

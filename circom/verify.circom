@@ -77,9 +77,9 @@ include "public_coin.circom";
     signal input addicity_root;
     signal input constraint_commitment;
     signal input constraint_evaluations[num_queries][trace_width];
-    signal input constraint_query_proofs[num_queries][tree_depth + 1];
+    signal input constraint_query_proofs[num_queries][tree_depth];
     signal input fri_commitments[num_fri_layers+1];
-    signal input fri_layer_proofs[num_fri_layers][num_queries][tree_depth + 1];
+    signal input fri_layer_proofs[num_fri_layers][num_queries][tree_depth];
     signal input fri_layer_queries[num_fri_layers][num_queries * folding_factor];
     signal input fri_remainder[remainder_size];
     signal input ood_constraint_evaluations[trace_width];
@@ -89,7 +89,7 @@ include "public_coin.circom";
     signal input pow_nonce;
     signal input trace_commitment;
     signal input trace_evaluations[num_queries][trace_width];
-    signal input trace_query_proofs[num_queries][tree_depth + 1];
+    signal input trace_query_proofs[num_queries][tree_depth];
 
     signal constraint_div[num_queries][trace_width];
     signal constraint_evalxcoeff[num_queries][trace_width];
@@ -233,7 +233,7 @@ include "public_coin.circom";
     traceCommitmentVerifier.root <== trace_commitment;
     for (var i = 0; i < num_queries; i++) {
         traceCommitmentVerifier.indexes[i] <== pub_coin.query_positions[i];
-        for (var j = 0; j <= tree_depth; j++) {
+        for (var j = 0; j < tree_depth; j++) {
             traceCommitmentVerifier.openings[i][j] <== trace_query_proofs[i][j];
         }
     }
@@ -242,7 +242,7 @@ include "public_coin.circom";
     constraintCommitmentVerifier.root <== constraint_commitment;
     for (var i = 0; i < num_queries; i++) {
         constraintCommitmentVerifier.indexes[i] <== pub_coin.query_positions[i];
-        for (var j = 0; j <= tree_depth; j++) {
+        for (var j = 0; j < tree_depth; j++) {
             constraintCommitmentVerifier.openings[i][j] <== constraint_query_proofs[i][j];
         }
     }
