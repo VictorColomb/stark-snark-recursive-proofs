@@ -33,19 +33,12 @@ template OodConsistencyCheck(
     signal input boundary_coeffs[num_assertions][2];
     signal input channel_ood_evaluations[trace_width];
     signal input frame[2][trace_width];
+    signal input ood_frame_constraint_evaluation[trace_width];
     signal input g_trace;
     signal input public_inputs[num_public_inputs];
     signal input transition_coeffs[trace_width][2];
     signal input z;
 
-    // TRANSITION CONSTRAINT EVALUATIONS
-
-    component evaluate_transitions = BasicTransitions(trace_width);
-    for (var i = 0; i < 2; i++){
-        for (var j = 0; j < trace_width; j++) {
-            evaluate_transitions.frame[i][j] <== frame[i][j];
-        }
-    }
 
     // building transition divisor
     // for transition constraints, it is always the same : div(x) = (x**n)/(product i : 1 --> k : (x - g ** (n - i)))
@@ -65,17 +58,19 @@ template OodConsistencyCheck(
     signal evaluation_result[trace_width + num_assertions];
 
     component transition_deg_adjustment[trace_width];
+    component AIR = AIRTransitions(trace_width);
+
     signal transition_temp[trace_width];
     for (var i = 0; i < trace_width; i++) {
         transition_deg_adjustment[i] = Pow_signal(numbits(trace_length * ce_blowup_factor - 1));
         transition_deg_adjustment[i].in <== z;
-        transition_deg_adjustment[i].exp <== trace_length * ce_blowup_factor - evaluate_transitions.transition_degree[i];
+        transition_deg_adjustment[i].exp <== trace_length * ce_blowup_factor - AIR.transition_degree[i];
         transition_temp[i] <== transition_coeffs[i][0] + transition_coeffs[i][1] * transition_deg_adjustment[i].out;
 
         if (i == 0) {
-            evaluation_result[i] <== transition_temp[i] * evaluate_transitions.out[i];
+            evaluation_result[i] <== transition_temp[i] * ood_frame_constraint_evaluation[i];
         } else {
-            evaluation_result[i] <== evaluation_result[i-1] +  transition_temp[i] * evaluate_transitions.out[i];
+            evaluation_result[i] <== evaluation_result[i-1] +  transition_temp[i] * ood_frame_constraint_evaluation[i];
         }
 
     }
@@ -87,7 +82,7 @@ template OodConsistencyCheck(
 
     // BOUNDARY CONSTRAINTS EVALUATIONS
 
-    component evaluate_boundary_constraints = BasicAssertions(
+    component evaluate_boundary_constraints = AIRAssertions(
         num_assertions,
         num_public_inputs,
         trace_length,

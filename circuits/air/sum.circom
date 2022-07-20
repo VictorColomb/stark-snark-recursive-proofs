@@ -3,32 +3,25 @@ pragma circom 2.0.4;
 include "../utils.circom";
 
 /**
- * Define how your computation transitions from one step
- * to the next one.
+ * Define the degree for the transitions constraints.
+ * 
  *
  * INPUTS:
  * - frame: Out Of Domain frame on which we will check the
  * the consistency with the channel.
  *
  * OUTPUTS:
- * - out: Out Of Domain transition evaluation for each trace column
  * - transition_degree : degree of the transition, will be used for degree
  *   adjustment. Should be set to the number of trace columns multiplied in
  *   during the transition.
  */
-template BasicTransitions(trace_width) {
-    signal input frame[2][2];
-    signal output out[trace_width];
+template AIRTransitions(trace_width) {
     signal output transition_degree[trace_width];
 
-    // frame[0] = current | frame[1] = next
-
     // transition 0
-    out[0] <== frame[1][0] - (frame[0][0] + 1);
     transition_degree[0] <== 1;
 
     // transition 1
-    out[1] <== frame[1][1] - (frame[0][1] + frame[0][0] + 1);
     transition_degree[1] <== 1;
 }
 
@@ -53,7 +46,7 @@ template BasicTransitions(trace_width) {
  * https://docs.rs/winter-air/0.4.0/winter_air/struct.ConstraintDivisor.html for
  * for other types of divisors.
  */
-template BasicAssertions(
+template AIRAssertions(
     num_assertions,
     num_public_inputs,
     trace_length,

@@ -82,6 +82,7 @@ template Verify(
     signal input fri_layer_queries[num_fri_layers][num_queries * folding_factor];
     signal input fri_remainder[remainder_size];
     signal input ood_constraint_evaluations[trace_width];
+    signal input ood_frame_constraint_evaluation[trace_width];
     signal input ood_trace_frame[2][trace_width];
     signal input pub_coin_seed[num_pub_coin_seed];
     signal input public_inputs[num_public_inputs];
@@ -210,11 +211,9 @@ template Verify(
     ood.z <== pub_coin.z;
     for (var i = 0; i < trace_width; i++) {
         ood.channel_ood_evaluations[i] <== ood_constraint_evaluations[i];
-    }
-    for (var i = 0; i < 2; i++){
-        for (var j = 0; j < trace_width; j++) {
-            ood.frame[i][j] <== ood_trace_frame[i][j];
-        }
+        ood.ood_frame_constraint_evaluation[i] <== ood_frame_constraint_evaluation[i];
+        ood.frame[0][i] <== ood_trace_frame[0][i];
+        ood.frame[1][i] <== ood_trace_frame[1][i];
     }
 
 

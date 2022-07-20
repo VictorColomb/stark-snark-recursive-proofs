@@ -54,7 +54,7 @@ pub fn proof_to_json<AIR, H>(
     fri_tree_depths: &mut Vec<usize>,
 ) -> Value
 where
-    AIR: Air,
+    AIR: Air<BaseField = BaseElement>,
     <AIR as Air>::PublicInputs: Serialize,
     H: ElementHasher<BaseField = BaseElement>,
 {
@@ -133,6 +133,11 @@ where
     public_coin.reseed(H::hash_elements(ood_trace_frame.current()));
     public_coin.reseed(H::hash_elements(ood_trace_frame.next()));
     public_coin.reseed(H::hash_elements(&ood_constraint_evaluations));
+
+    // OOD FRAME CONSTRAINT EVALUATIONS
+    // FIXME: fix periodic values
+    let mut ood_frame_constraint_evaluation = BaseElement::zeroed_vector(air.trace_info().width());
+    air.evaluate_transition::<BaseElement>(&ood_trace_frame, &[], &mut ood_frame_constraint_evaluation);
 
     let ood_trace_frame = (ood_trace_frame.current(), ood_trace_frame.next());
 
@@ -288,6 +293,7 @@ where
         "fri_layer_queries": fri_layer_queries,
         "fri_remainder": fri_remainder,
         "ood_constraint_evaluations": ood_constraint_evaluations,
+        "ood_frame_constraint_evaluation" : ood_frame_constraint_evaluation,
         "ood_trace_frame": ood_trace_frame,
         "pow_nonce": pow_nonce,
         "pub_coin_seed": pub_coin_seed,

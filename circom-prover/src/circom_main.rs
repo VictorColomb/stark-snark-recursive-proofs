@@ -47,7 +47,7 @@ where
     file.write("pragma circom 2.0.0;\n\n".as_bytes())?;
     file.write("include \"circuits/verify.circom\";\n".as_bytes())?;
     file.write(format!("include \"circuits/air/{}.circom\";\n\n", filename).as_bytes())?;
-    file.write("component main = Verify(\n".as_bytes())?;
+    file.write("component main {public [ood_frame_constraint_evaluation, ood_trace_frame]}= Verify(\n".as_bytes())?;
     file.write(
         format!(
             "    {}, // addicity\n    {}, // ce_blowup_factor\n    {}, // domain_offset\n    {}, // folding_factor\n    {}, // fri_num_queries\n    {}, // fri_tree_depth\n    {}, // grinding_factor\n    {}, // lde_blowup_factor\n    {}, // num_assertions\n    {}, // num_draws\n    {}, // num_fri_layers\n    {}, // num_pub_coin_seed\n    {}, // num_public_inputs\n    {}, // num_queries\n    {}, // num_transition_constraints\n    {}, // trace_length\n    {},  // trace_length\n    {} // tree_depth\n);\n",
