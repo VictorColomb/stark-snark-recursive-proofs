@@ -1,4 +1,4 @@
-use serde::{Serialize, ser::SerializeTuple};
+use serde::{ser::SerializeTuple, Serialize};
 use winter_air::{
     Air, AirContext, Assertion, EvaluationFrame, ProofOptions, TraceInfo,
     TransitionConstraintDegree,
@@ -29,7 +29,6 @@ impl Serialize for PublicInputs {
         state.end()
     }
 }
-
 
 impl Serializable for PublicInputs {
     fn write_into<W: ByteWriter>(&self, target: &mut W) {

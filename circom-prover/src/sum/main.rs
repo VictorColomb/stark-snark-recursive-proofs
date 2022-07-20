@@ -2,10 +2,10 @@ use winter_circom_prover::prepare_circom_verification;
 use winter_math::{fields::f256::BaseElement, FieldElement};
 use winter_prover::{FieldExtension, HashFunction, ProofOptions};
 
+mod air;
+
 mod prover;
 use prover::WorkProver;
-
-mod air;
 
 fn main() {
     // computation parameters
@@ -27,5 +27,5 @@ fn main() {
     let prover = WorkProver::new(options.clone());
     let trace = prover.build_trace(start, trace_length);
 
-    prepare_circom_verification(prover, trace, "verifier.circom");
+    prepare_circom_verification(prover, trace, "sum_verifier.circom");
 }

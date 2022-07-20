@@ -20,3 +20,7 @@ winter-fri = { version = "0.4.0", default-features = false, path = "../fri" }
 serde = { version = "1.0", default-features = false }
 serde_json = { version = "1.0", default-features = false }
 winter-utils = { version = "0.4.0", default-features = false, path = "../utils/core" }
+
+[[bin]]
+name = "sum"
+path = "src/sum/main.rs"
