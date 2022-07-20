@@ -1,7 +1,7 @@
 use serde::Serialize;
 use serde_json::{json, Value};
 use winter_air::Air;
-use winter_crypto::{Digest, ElementHasher};
+use winter_crypto::{Digest, ElementHasher, RandomCoin};
 use winter_fri::folding::fold_positions;
 use winter_math::{fields::f256::BaseElement, log2, FieldElement, StarkField};
 use winter_prover::{Serializable, StarkProof};
@@ -43,10 +43,12 @@ use winter_prover::{Serializable, StarkProof};
 ///     "trace_query_proofs": [[tree_depth]; num_queries],
 /// }
 /// ```
+///
+/// ## TODO:
+/// - return errors instead of panicking (`.map_err()` and `?` instead of `.unwrap()`)
 pub fn proof_to_json<AIR, H>(
     proof: StarkProof,
     air: &AIR,
-    query_positions: &Vec<usize>,
     pub_inputs: AIR::PublicInputs,
     fri_num_queries: &mut Vec<usize>,
     fri_tree_depths: &mut Vec<usize>,
@@ -85,6 +87,8 @@ where
     pub_inputs.write_into(&mut pub_coin_seed);
     context.write_into(&mut pub_coin_seed);
 
+    let mut public_coin = RandomCoin::<BaseElement, H>::new(&pub_coin_seed);
+
     // turn into f256 field elements
     while pub_coin_seed.len() % BaseElement::ELEMENT_BYTES != 0 {
         pub_coin_seed.push(0);
@@ -106,6 +110,9 @@ where
         )
         .unwrap();
 
+    public_coin.reseed(trace_commitments[0]);
+    public_coin.reseed(constraint_commitment);
+
     // map commitments to BaseElements
     let trace_commitment = trace_commitments
         .iter()
@@ -115,12 +122,102 @@ where
     let constraint_commitment: BaseElement =
         BaseElement::from_le_bytes(&constraint_commitment.as_bytes());
 
+    // OOD FRAME
+    // ===========================================================================
+
+    // parse ood_frame, ignoring the ood_aux_trace_frame
+    let (ood_trace_frame, _, ood_constraint_evaluations) = ood_frame
+        .parse::<BaseElement>(main_trace_width, aux_trace_width, air.ce_blowup_factor())
+        .unwrap();
+
+    public_coin.reseed(H::hash_elements(ood_trace_frame.current()));
+    public_coin.reseed(H::hash_elements(ood_trace_frame.next()));
+    public_coin.reseed(H::hash_elements(&ood_constraint_evaluations));
+
+    let ood_trace_frame = (ood_trace_frame.current(), ood_trace_frame.next());
+
+    // FRI PROOF PART 1
+    // ===========================================================================
+
+    // only accept a fri proof with a single partition
+    assert_eq!(fri_proof.num_partitions(), 1);
+
+    for root in fri_commitments.iter() {
+        public_coin.reseed(*root);
+    }
+
     // there are fri_num_queries + 1 fri_commitments because
     // of the commitment for the remainder
     let fri_commitments = fri_commitments
         .iter()
         .map(|c| BaseElement::from_le_bytes(&c.as_bytes()))
         .collect::<Vec<_>>();
+
+    // QUERY POSITIONS
+    // ===========================================================================
+
+    public_coin.reseed_with_int(pow_nonce);
+
+    let query_positions = public_coin.draw_integers(num_queries, lde_domain_size).unwrap();
+
+    // FRI PROOF PART 2
+    // ===========================================================================
+
+    // parse fri proof into Merkle proofs and queries for each layer
+    let fri_remainder = fri_proof.parse_remainder::<BaseElement>().unwrap();
+    let (mut fri_layer_queries, fri_layer_proofs) = fri_proof
+        .parse_layers::<H, BaseElement>(lde_domain_size, folding_factor)
+        .unwrap();
+
+    // convert batch merkle proofs into authentication paths
+    // and map digests to BaseElements
+    let mut indexes = query_positions.clone();
+    let mut domain_size = lde_domain_size;
+    let mut fri_layer_proofs = fri_layer_proofs
+        .iter()
+        .map(|merkle_proof| {
+            indexes = fold_positions(&indexes, domain_size, folding_factor);
+            domain_size /= folding_factor;
+
+            merkle_proof
+                .to_paths(&indexes)
+                .unwrap()
+                .iter()
+                .map(|path| {
+                    path.iter()
+                        .map(|digest| BaseElement::from_le_bytes(&digest.as_bytes()))
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    // pad fri_query_proofs with zeroes to ensure constant size arrays
+    let tree_depth = log2(lde_domain_size) as usize;
+    let fri_layer_proofs = fri_layer_proofs
+        .iter_mut()
+        .map(|paths| {
+            fri_num_queries.push(paths.len());
+            fri_tree_depths.push(paths[0].len());
+
+            for path in paths.iter_mut() {
+                while path.len() < tree_depth {
+                    path.push(BaseElement::ZERO);
+                }
+            }
+            while paths.len() < num_queries {
+                paths.push(vec![BaseElement::ZERO; tree_depth]);
+            }
+            paths
+        })
+        .collect::<Vec<_>>();
+
+    // pad fri layer queries with zeroes to ensure constant size arrays
+    for queries in fri_layer_queries.iter_mut() {
+        while queries.len() < num_queries * folding_factor {
+            queries.push(BaseElement::ZERO);
+        }
+    }
 
     // TRACE QUERIES
     // ===========================================================================
@@ -178,76 +275,8 @@ where
         e
     });
 
-    // OOD FRAME
+    // BUILD JSON OBJECT
     // ===========================================================================
-
-    // parse ood_frame, ignoring the ood_aux_trace_frame
-    let (ood_trace_frame, _, ood_constraint_evaluations) = ood_frame
-        .parse::<BaseElement>(main_trace_width, aux_trace_width, air.ce_blowup_factor())
-        .unwrap();
-    let ood_trace_frame = (ood_trace_frame.current(), ood_trace_frame.next());
-
-    // FRI PROOF
-    // ===========================================================================
-
-    // only accept a fri proof with a single partition
-    assert_eq!(fri_proof.num_partitions(), 1);
-
-    // parse fri proof into Merkle proofs and queries for each layer
-    let fri_remainder = fri_proof.parse_remainder::<BaseElement>().unwrap();
-    let (mut fri_layer_queries, fri_layer_proofs) = fri_proof
-        .parse_layers::<H, BaseElement>(lde_domain_size, folding_factor)
-        .unwrap();
-
-    // convert batch merkle proofs into authentication paths
-    // and map digests to BaseElements
-    let mut indexes = query_positions.clone();
-    let mut domain_size = lde_domain_size;
-    let mut fri_layer_proofs = fri_layer_proofs
-        .iter()
-        .map(|merkle_proof| {
-            indexes = fold_positions(&indexes, domain_size, folding_factor);
-            domain_size /= folding_factor;
-
-            merkle_proof
-                .to_paths(&indexes)
-                .unwrap()
-                .iter()
-                .map(|path| {
-                    path.iter()
-                        .map(|digest| BaseElement::from_le_bytes(&digest.as_bytes()))
-                        .collect::<Vec<_>>()
-                })
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-
-    // pad fri_query_proofs with zeroes to ensure constant size arrays
-    let tree_depth = log2(lde_domain_size) as usize;
-    let fri_layer_proofs = fri_layer_proofs
-        .iter_mut()
-        .map(|paths| {
-            fri_num_queries.push(paths.len());
-            fri_tree_depths.push(paths[0].len());
-
-            for path in paths.iter_mut() {
-                while path.len() < tree_depth {
-                    path.push(BaseElement::ZERO);
-                }
-            }
-            while paths.len() < num_queries {
-                paths.push(vec![BaseElement::ZERO; tree_depth]);
-            }
-            paths
-        })
-        .collect::<Vec<_>>();
-
-    // pad fri layer queries with zeroes to ensure constant size arrays
-    for queries in fri_layer_queries.iter_mut() {
-        while queries.len() < num_queries * folding_factor {
-            queries.push(BaseElement::ZERO);
-        }
-    }
 
     json!({
         "addicity_root": BaseElement::TWO_ADIC_ROOT_OF_UNITY,

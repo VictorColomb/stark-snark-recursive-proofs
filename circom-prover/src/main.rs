@@ -9,11 +9,8 @@ use winter_math::{log2, StarkField};
 use winter_prover::{FieldExtension, HashFunction, ProofOptions, Prover};
 use winter_verifier::verify;
 
-#[cfg(test)]
-mod tests;
-
 fn main() {
-    // PROOF
+    // BUILD PROOF
     // ===========================================================================
 
     // computation parameters
@@ -35,7 +32,7 @@ fn main() {
     let prover = WorkProver::new(options.clone());
     let trace = prover.build_trace(start, n);
     let pub_inputs = prover.get_pub_inputs(&trace);
-    let (proof, query_positions) = prover.prove(trace).unwrap();
+    let proof = prover.prove(trace).unwrap();
 
     // Serialize the proof into a "proof" file
     let mut file = File::create("proof").unwrap();
@@ -63,7 +60,6 @@ fn main() {
     let json = proof_to_json::<WorkAir, Poseidon<BaseElement>>(
         proof.clone(),
         &air,
-        &query_positions,
         pub_inputs.clone(),
         &mut fri_num_queries,
         &mut fri_tree_depths,
@@ -79,8 +75,22 @@ fn main() {
     // CIRCOM MAIN
     // ===========================================================================
 
-    let fri_num_queries = format!("[{}]", fri_num_queries.iter().map(|x| format!("{}", x)).collect::<Vec<_>>().join(","));
-    let fri_tree_depths = format!("[{}]", fri_tree_depths.iter().map(|x| format!("{}", x)).collect::<Vec<_>>().join(","));
+    let fri_num_queries = format!(
+        "[{}]",
+        fri_num_queries
+            .iter()
+            .map(|x| format!("{}", x))
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+    let fri_tree_depths = format!(
+        "[{}]",
+        fri_tree_depths
+            .iter()
+            .map(|x| format!("{}", x))
+            .collect::<Vec<_>>()
+            .join(",")
+    );
 
     let mut file = File::create("verifier_main.circom").unwrap();
 

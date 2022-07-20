@@ -157,7 +157,7 @@ pub trait Prover {
     /// secret and public inputs. Public inputs must match the value returned from
     /// [Self::get_pub_inputs()](Prover::get_pub_inputs) for the provided trace.
     #[rustfmt::skip]
-    fn prove(&self, trace: Self::Trace) -> Result<(StarkProof, Vec<usize>), ProverError> {
+    fn prove(&self, trace: Self::Trace) -> Result<StarkProof, ProverError> {
         // figure out which version of the generic proof generation procedure to run. this is a sort
         // of static dispatch for selecting two generic parameter: extension field and hash function.
         match self.options().field_extension() {
@@ -200,7 +200,7 @@ pub trait Prover {
     /// execution `trace` is valid against this prover's AIR.
     /// TODO: make this function un-callable externally?
     #[doc(hidden)]
-    fn generate_proof<E, H>(&self, mut trace: Self::Trace) -> Result<(StarkProof, Vec<usize>), ProverError>
+    fn generate_proof<E, H>(&self, mut trace: Self::Trace) -> Result<StarkProof, ProverError>
     where
         E: FieldElement<BaseField = Self::BaseField>,
         H: ElementHasher<BaseField = Self::BaseField>,
@@ -448,7 +448,7 @@ pub trait Prover {
         #[cfg(feature = "std")]
         debug!("Built proof object in {} ms", now.elapsed().as_millis());
 
-        Ok((proof, query_positions))
+        Ok(proof)
     }
 
     /// Computes a low-degree extension (LDE) of the provided execution trace over the specified
