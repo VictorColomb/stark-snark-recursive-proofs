@@ -1,6 +1,6 @@
 pragma circom 2.0.4;
 
-include "../circom/utils.circom";
+include "../utils.circom";
 
 /**
  * Define how your computation transitions from one step
@@ -59,7 +59,6 @@ template BasicAssertions(
     trace_length,
     trace_width
 ) {
-
     signal input frame[2][trace_width];
     signal input g_trace;
     signal input public_inputs[num_public_inputs];

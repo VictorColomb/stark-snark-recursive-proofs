@@ -1,17 +1,15 @@
 pragma circom 2.0.4;
 
-include "../air/basic.circom";
-
 
 /**
- * Checks that the evaluations of composition polynomials sent by the prover 
+ * Checks that the evaluations of composition polynomials sent by the prover
  * are consistent with valuations obtained by evaluating constraints over the
  * out-of-domain frame. This template does not return any signal, its purpose is
  * just to create the 'channel_result === evaluation_result' constraint
- * 
+ *
  * ARGUMENTS:
  * - See verify.circom
- * 
+ *
  * INPUTS:
  * - boundary_coeffs: Fiat-Shamir coefficients for the boundary constraints.
  * - channel_ood_evaluations: Out Of Domain evaluations given in the proof.
@@ -20,7 +18,7 @@ include "../air/basic.circom";
  * - transition_coeffs: Fiat-Shamir coefficients for the transition constraints.
  * - z: Out Of Domain point of evaluation, generated in the public coin.
  *
- * TODO: 
+ * TODO:
  * - add support for composition with different degrees
  * - add support for periodic values
  * - group transitions by degree to reduce the number of degree adjustment
@@ -117,8 +115,8 @@ template OodConsistencyCheck(
         boundary_deg_adjustment[i] = Pow_signal(255);
         boundary_deg_adjustment[i].in <== z;
         boundary_deg_adjustment[i].exp <== trace_length * ce_blowup_factor -1 + evaluate_boundary_constraints.divisor_degree[i] - (trace_length - 1);
-        boundary_temp[i] <==  boundary_coeffs[i][0] + boundary_coeffs[i][1] * boundary_deg_adjustment[i].out; 
-        
+        boundary_temp[i] <==  boundary_coeffs[i][0] + boundary_coeffs[i][1] * boundary_deg_adjustment[i].out;
+
         // divisor for boundary constraints
         // for single constraints the divisor is always x - g**step
         gpstep[i] = Pow_signal(numbits(trace_length));
@@ -137,7 +135,7 @@ template OodConsistencyCheck(
 
     }
 
-    
+
     // reduce evaluations of composition polynomial columns sent by the prover into
     // a single value by computing sum(z^i * value_i), where value_i is the evaluation of the ith
     // column polynomial at z^m, where m is the total number of column polynomials

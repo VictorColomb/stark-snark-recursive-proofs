@@ -14,7 +14,7 @@ do
 			HELP=1
 			shift
 			;;
-		-v|--verbose)
+		--verbose)
 			VERBOSE="-v"
 			shift
 			;;
@@ -34,6 +34,14 @@ do
 			PRINT=1
 			shift
 			;;
+		-v|--verify)
+			VERIFY=1
+			shift
+			;;
+		--clean)
+			CLEAN=1
+			shift
+			;;
 		*)
 			POSITIONAL+=("$1")
 			shift
@@ -43,7 +51,7 @@ done
 
 set -- "${POSITIONAL[@]}"
 
-if [[ $1 == "*.circom" ]]
+if [[ ${1##*.} == "circom" ]]
 then
 	TARGET_INPUT=${1::-7}
 else
@@ -52,7 +60,7 @@ fi
 TARGET=${TARGET_INPUT##*/}
 FINAL=${2:-"final.ptau"}
 
-if [[ ! (COMPILE -eq 1 || WITNESS -eq 1 || PROVE -eq 1 || PRINT -eq 1) ]]
+if [[ ! (COMPILE -eq 1 || WITNESS -eq 1 || PROVE -eq 1 || PRINT -eq 1 || VERIFY -eq 1 || CLEAN -eq 1) ]]
 then
 	COMPILE=1
 	WITNESS=1
@@ -76,13 +84,15 @@ then
 	echo
 	echo "OPTIONS:"
 	echo "	-h|--help		Show this help message and exit"
-	echo "	-v|--verbose	Show verbose output"
+	echo "	   --verbose	Show verbose output"
 	echo "	-w|--witness	Compute witness (done anyway if no witness found)"
 	echo "	-c|--compile	Compile circuit (done anyway if no R1CS found)"
 	echo "	-p|--prove		Prove the circuit with the provided inputs in input.json"
 	echo "	-e|--echo		Print public inputs and outputs after the proof is completed"
+	echo "	-v|--verify		Verify the proof with the provided inputs in input.json"
+	echo "	   --clean		Clean up build files"
 	echo
-	echo "If the flags -w, -c, -p and -e are all absent, the complete process will be carried out (compilation, witness, proving and printing)."
+	echo "If the flags -w, -c, -p, -e, -v, --clean are all absent, the complete proving process will be carried out (compilation, witness, proving and printing)."
 	exit ${EXIT:-0}
 fi
 
@@ -94,8 +104,10 @@ then
 fi
 
 # GO TO BUILD DIR
-[ ! -d build ] && mkdir build
-cd build
+[ ! -d target ] && mkdir target
+cd target
+[ ! -d circom ] && mkdir circom
+cd circom
 [ ! -d "$TARGET" ] && mkdir "$TARGET"
 cd "$TARGET"
 
@@ -111,7 +123,7 @@ then
 		then
 			VERBOSE_CIRCOM="--verbose"
 		fi
-		circom "../../${TARGET_INPUT}.circom" --r1cs --sym --c $VERBOSE_CIRCOM
+		circom "../../../${TARGET_INPUT}.circom" --r1cs --sym --c $VERBOSE_CIRCOM
 		[ ! -f ${TARGET}.r1cs ] && exit 1
 		[ ! -d ${TARGET}_cpp ] && exit 1
 	fi
@@ -123,7 +135,7 @@ then
 		cd "${TARGET}_cpp"
 		make
 		cd ..
-		"${TARGET}_cpp/${TARGET}" ../../input.json witness.wtns
+		"${TARGET}_cpp/${TARGET}" ../../../input.json witness.wtns
 		[ ! -f witness.wtns ] && exit 1
 		[ ! -f "${TARGET}.r1cs" ] && exit 1
 	fi
@@ -133,14 +145,14 @@ fi
 if [[ PROVE -eq 1 ]]
 then
 	# check input.json
-	if [[ ! -f ../../input.json ]]
+	if [[ ! -f ../../../input.json ]]
 	then
 		echo -e "${RED}[!] input.json not found${NORMAL}"
 		exit 1
 	fi
 
 	# generate circuit keys
-	snarkjs groth16 setup ${TARGET}.r1cs ../../$FINAL ${TARGET}_0000.zkey $VERBOSE
+	snarkjs groth16 setup ${TARGET}.r1cs ../../../$FINAL ${TARGET}_0000.zkey $VERBOSE
 	[ ! -f ${TARGET}_0000.zkey ] && exit 1
 	snarkjs zkey contribute ${TARGET}_0000.zkey ${TARGET}_0001.zkey -e="$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)" $VERBOSE
 	[ ! -f ${TARGET}_0001.zkey ] && exit 1
@@ -164,4 +176,29 @@ then
 	cat public.json
 	echo
 	echo
+fi
+
+# VERIFY PROOF IF FLAGS
+if [[ VERIFY -eq 1 ]]
+then
+	if [[ -e "verification_key.json" ]]; then
+		if [[ -e "public.json" ]]; then
+			if [[ -e "proof.json" ]]; then
+				snarkjs groth16 verify verification_key.json public.json proof.json $VERBOSE
+			else
+				echo -e "${RED}[!] proof.json not found${NORMAL}"
+			fi
+		else
+			echo -e "${RED}[!] public.json not found${NORMAL}"
+		fi
+	else
+		echo -e "${RED}[!] verification_key not found${NORMAL}"
+	fi
+fi
+
+# CLEAN UP IF FLAGS
+if [[ CLEAN -eq 1 ]]
+then
+	cd ..
+	rm -rf "$TARGET"
 fi

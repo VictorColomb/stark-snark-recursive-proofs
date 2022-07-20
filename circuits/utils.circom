@@ -1,6 +1,7 @@
 pragma circom 2.0.4;
 
-include "./poseidon/poseidon.circom";
+include "poseidon/poseidon.circom";
+
 
 /**
  * Exponentiation where the exponent is not a signal.

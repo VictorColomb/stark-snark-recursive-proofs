@@ -1,7 +1,8 @@
 pragma circom 2.0.4;
 
-include "./poseidon/poseidon.circom";
-include "./utils.circom";
+include "poseidon/poseidon.circom";
+include "utils.circom";
+
 
 /**
  * Pseudo-random generator used to create and verify a STARK. Usually, random

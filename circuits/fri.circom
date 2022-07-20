@@ -3,6 +3,7 @@ pragma circom 2.0.4;
 include "utils.circom";
 include "merkle.circom";
 
+
 template FriVerifier(
     addicity,
     domain_offset,
