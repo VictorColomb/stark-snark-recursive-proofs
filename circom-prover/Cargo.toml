@@ -23,4 +23,8 @@ winter-utils = { version = "0.4.0", default-features = false, path = "../utils/c
 
 [[bin]]
 name = "sum"
-path = "src/sum/main.rs"
+path = "src/sum/prove.rs"
+
+[[bin]]
+name = "sum_verif"
+path = "src/sum/verify.rs"

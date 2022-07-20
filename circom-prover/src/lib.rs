@@ -70,7 +70,7 @@ where
 
     // print json to file
     let json_string = format!("{}", json);
-    let mut file = File::create("proof.json").unwrap();
+    let mut file = File::create("stark.json").unwrap();
     file.write(&json_string.into_bytes()).unwrap();
 
     // CIRCOM MAIN

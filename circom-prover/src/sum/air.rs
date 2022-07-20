@@ -8,7 +8,7 @@ use winter_math::{fields::f256::BaseElement, FieldElement};
 use winter_prover::ByteWriter;
 use winter_utils::Serializable;
 
-#[derive(Clone)]
+#[derive(Clone,Default)]
 pub struct PublicInputs {
     pub start: BaseElement,
     pub result: BaseElement,
@@ -48,7 +48,6 @@ impl Air for WorkAir {
     type PublicInputs = PublicInputs;
 
     fn new(trace_info: TraceInfo, pub_inputs: PublicInputs, options: ProofOptions) -> Self {
-        assert_eq!(2, trace_info.width());
 
         let degrees = vec![
             TransitionConstraintDegree::new(1),
@@ -88,5 +87,12 @@ impl Air for WorkAir {
 
     fn context(&self) -> &AirContext<Self::BaseField> {
         &self.context
+    }
+}
+
+impl WorkAir {
+
+    pub fn default() -> Self {
+        WorkAir::new(TraceInfo::new(1, 8), PublicInputs::default(), ProofOptions::new(32, 8, 0, winter_air::HashFunction::Poseidon, winter_air::FieldExtension::None, 8, 256))
     }
 }

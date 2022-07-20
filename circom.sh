@@ -87,9 +87,9 @@ then
 	echo "	   --verbose	Show verbose output"
 	echo "	-w|--witness	Compute witness (done anyway if no witness found)"
 	echo "	-c|--compile	Compile circuit (done anyway if no R1CS found)"
-	echo "	-p|--prove		Prove the circuit with the provided inputs in input.json"
+	echo "	-p|--prove		Prove the circuit with the provided inputs in stark.json"
 	echo "	-e|--echo		Print public inputs and outputs after the proof is completed"
-	echo "	-v|--verify		Verify the proof with the provided inputs in input.json"
+	echo "	-v|--verify		Verify the proof with the provided inputs in stark.json"
 	echo "	   --clean		Clean up build files"
 	echo
 	echo "If the flags -w, -c, -p, -e, -v, --clean are all absent, the complete proving process will be carried out (compilation, witness, proving and printing)."
@@ -135,7 +135,7 @@ then
 		cd "${TARGET}_cpp"
 		make
 		cd ..
-		"${TARGET}_cpp/${TARGET}" ../../../input.json witness.wtns
+		"${TARGET}_cpp/${TARGET}" ../../../stark.json witness.wtns
 		[ ! -f witness.wtns ] && exit 1
 		[ ! -f "${TARGET}.r1cs" ] && exit 1
 	fi
@@ -144,10 +144,10 @@ fi
 # GENERATE PROOF
 if [[ PROVE -eq 1 ]]
 then
-	# check input.json
-	if [[ ! -f ../../../input.json ]]
+	# check stark.json
+	if [[ ! -f ../../../stark.json ]]
 	then
-		echo -e "${RED}[!] input.json not found${NORMAL}"
+		echo -e "${RED}[!] stark.json not found${NORMAL}"
 		exit 1
 	fi
 
