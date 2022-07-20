@@ -3,6 +3,7 @@ use winter_air::{
     Air, AirContext, Assertion, EvaluationFrame, ProofOptions, TraceInfo,
     TransitionConstraintDegree,
 };
+use winter_circom_prover::WinterPublicInputs;
 use winter_math::{fields::f256::BaseElement, FieldElement};
 use winter_prover::ByteWriter;
 use winter_utils::Serializable;
@@ -11,6 +12,10 @@ use winter_utils::Serializable;
 pub struct PublicInputs {
     pub start: BaseElement,
     pub result: BaseElement,
+}
+
+impl WinterPublicInputs for PublicInputs {
+    const NUM_PUB_INPUTS: usize = 2;
 }
 
 impl Serialize for PublicInputs {

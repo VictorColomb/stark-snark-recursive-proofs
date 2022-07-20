@@ -29,9 +29,6 @@ impl WorkProver {
 
         trace
     }
-
-    pub const NUM_PUB_INPUTS : usize = 2;
-
 }
 
 impl Prover for WorkProver {
@@ -50,5 +47,4 @@ impl Prover for WorkProver {
     fn options(&self) -> &ProofOptions {
         &self.options
     }
-
 }
