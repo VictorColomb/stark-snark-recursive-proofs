@@ -27,5 +27,5 @@ fn main() {
     let prover = WorkProver::new(options.clone());
     let trace = prover.build_trace(start, trace_length);
 
-    prepare_circom_verification(prover, trace, "sum_verifier.circom");
+    prepare_circom_verification(prover, trace, "sum");
 }

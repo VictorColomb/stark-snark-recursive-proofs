@@ -12,5 +12,9 @@ Cargo.lock
 # macOS attribute files
 **/.DS_store
 
+# circom & snarkjs
+target/
+*.ptau
+
 # VS Code settings
 **/.vscode

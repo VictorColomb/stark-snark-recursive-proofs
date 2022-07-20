@@ -42,10 +42,11 @@ where
             .join(", ")
     );
 
-    let mut file = File::create(filename)?;
+    let mut file = File::create(filename.to_owned() + "_verifier.circom")?;
 
     file.write("pragma circom 2.0.0;\n\n".as_bytes())?;
-    file.write("include \"circom/verify.circom\";\n".as_bytes())?;
+    file.write("include \"circuits/verify.circom\";\n".as_bytes())?;
+    file.write(format!("include \"circuits/air/{}.circom\";\n\n", filename).as_bytes())?;
     file.write("component main = Verify(\n".as_bytes())?;
     file.write(
         format!(
