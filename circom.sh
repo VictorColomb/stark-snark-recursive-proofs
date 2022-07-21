@@ -51,13 +51,7 @@ done
 
 set -- "${POSITIONAL[@]}"
 
-if [[ ${1##*.} == "circom" ]]
-then
-	TARGET_INPUT=${1::-7}
-else
-	TARGET_INPUT=$1
-fi
-TARGET=${TARGET_INPUT##*/}
+TARGET=$1
 FINAL=${2:-"final.ptau"}
 
 if [[ ! (COMPILE -eq 1 || WITNESS -eq 1 || PROVE -eq 1 || PRINT -eq 1 || VERIFY -eq 1 || CLEAN -eq 1) ]]
@@ -79,7 +73,7 @@ then
 	echo -e "${YELLOW}Usage: $0 [-h] [-v] [-w] [-c] [-p] <circuit_name> [phase1_key]${NORMAL}"
 	echo
 	echo "ARGUMENTS:"
-	echo "	circuit_name	Name of circuit to prove (.circom extension optional)"
+	echo "	circuit_name	Name of circuit to prove"
 	echo "	phase1_key		Phase 1 final key to use. Optional, default is final.ptau"
 	echo
 	echo "OPTIONS:"
@@ -108,36 +102,36 @@ fi
 cd target
 [ ! -d circom ] && mkdir circom
 cd circom
-[ ! -d "$TARGET" ] && mkdir "$TARGET"
+[ ! -d "$TARGET" ] && echo -e "${RED}[!] Circuit ${TARGET} not found${NORMAL}" && exit 1
 cd "$TARGET"
 
 # WITNESS AND/OR COMPILE IF FLAGS
-if [[ (! (-f witness.wtns && -f "${TARGET}.r1cs")) || WITNESS -eq 1 || COMPILE -eq 1 ]]
+if [[ (! (-f witness.wtns && -f "verifier.r1cs")) || WITNESS -eq 1 || COMPILE -eq 1 ]]
 then
 	# compile
-	if [[ COMPILE -eq 1 || ((WITNESS -eq 1 || PROVE -eq 1) && ! (-f "${TARGET}.r1cs" && -d "${TARGET}_cpp")) ]]
+	if [[ COMPILE -eq 1 || ((WITNESS -eq 1 || PROVE -eq 1) && ! (-f "verifier.r1cs" && -d "verifier_cpp")) ]]
 	then
-		rm -rf "${TARGET}_cpp"
-		rm -f "${TARGET}.r1cs"
+		rm -rf "verifier_cpp"
+		rm -f "verifier.r1cs"
 		if [[ $VERBOSE == "-v" ]]
 		then
 			VERBOSE_CIRCOM="--verbose"
 		fi
-		circom "../../../${TARGET_INPUT}.circom" --r1cs --sym --c $VERBOSE_CIRCOM
-		[ ! -f ${TARGET}.r1cs ] && exit 1
-		[ ! -d ${TARGET}_cpp ] && exit 1
+		circom "verifier.circom" --r1cs --sym --c $VERBOSE_CIRCOM
+		[ ! -f verifier.r1cs ] && exit 1
+		[ ! -d verifier_cpp ] && exit 1
 	fi
 
 	# witness
 	if [[ WITNESS -eq 1 || (PROVE -eq 1 && ! -f witness.wtns) || (PROVE -eq 1 && COMPILE -eq 1) ]]
 	then
 		rm -f witness.wtns
-		cd "${TARGET}_cpp"
+		cd "verifier_cpp"
 		make
 		cd ..
-		"${TARGET}_cpp/${TARGET}" ../../../stark.json witness.wtns
+		"verifier_cpp/verifier" input.json witness.wtns
 		[ ! -f witness.wtns ] && exit 1
-		[ ! -f "${TARGET}.r1cs" ] && exit 1
+		[ ! -f "verifier.r1cs" ] && exit 1
 	fi
 fi
 
@@ -145,21 +139,21 @@ fi
 if [[ PROVE -eq 1 ]]
 then
 	# check stark.json
-	if [[ ! -f ../../../stark.json ]]
+	if [[ ! -f input.json ]]
 	then
-		echo -e "${RED}[!] stark.json not found${NORMAL}"
+		echo -e "${RED}[!] input.json not found${NORMAL}"
 		exit 1
 	fi
 
 	# generate circuit keys
-	snarkjs groth16 setup ${TARGET}.r1cs ../../../$FINAL ${TARGET}_0000.zkey $VERBOSE
-	[ ! -f ${TARGET}_0000.zkey ] && exit 1
-	snarkjs zkey contribute ${TARGET}_0000.zkey ${TARGET}_0001.zkey -e="$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)" $VERBOSE
-	[ ! -f ${TARGET}_0001.zkey ] && exit 1
-	snarkjs zkey export verificationkey ${TARGET}_0001.zkey verification_key.json $VERBOSE
+	snarkjs groth16 setup verifier.r1cs ../../../$FINAL verifier_0000.zkey $VERBOSE
+	[ ! -f verifier_0000.zkey ] && exit 1
+	snarkjs zkey contribute verifier_0000.zkey verifier_0001.zkey -e="$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)" $VERBOSE
+	[ ! -f verifier_0001.zkey ] && exit 1
+	snarkjs zkey export verificationkey verifier_0001.zkey verification_key.json $VERBOSE
 
 	# prove
-	snarkjs groth16 prove ${TARGET}_0001.zkey witness.wtns proof.json public.json $VERBOSE || exit 1
+	snarkjs groth16 prove verifier_0001.zkey witness.wtns proof.json public.json $VERBOSE || exit 1
 	[ ! -f proof.json ] && exit 1
 	[ ! -f public.json ] && exit 1
 fi

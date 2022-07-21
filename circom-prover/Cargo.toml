@@ -22,9 +22,9 @@ serde_json = { version = "1.0", default-features = false }
 winter-utils = { version = "0.4.0", default-features = false, path = "../utils/core" }
 
 [[bin]]
-name = "sum"
+name = "sum_prove"
 path = "src/sum/prove.rs"
 
 [[bin]]
-name = "sum_verif"
+name = "sum_verify"
 path = "src/sum/verify.rs"

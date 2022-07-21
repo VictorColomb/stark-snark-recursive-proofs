@@ -1,4 +1,4 @@
-use winter_circom_prover::circom_verification;
+use winter_circom_prover::circom_prove;
 use winter_math::{fields::f256::BaseElement, FieldElement};
 use winter_prover::{FieldExtension, HashFunction, ProofOptions};
 
@@ -27,5 +27,5 @@ fn main() {
     let prover = WorkProver::new(options.clone());
     let trace = prover.build_trace(start, trace_length);
 
-    circom_verification(prover, trace, "sum");
+    circom_prove(prover, trace, "sum");
 }
