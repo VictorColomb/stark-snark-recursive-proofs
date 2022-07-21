@@ -14,11 +14,11 @@ use crate::WinterPublicInputs;
  * Generate a circom main file that defines the parameters for verifying a proof.
  */
 pub fn generate_circom_main<E, AIR>(
-    filename: &str,
+    circuit_name: &str,
     air: &AIR,
     fri_num_queries: &Vec<usize>,
     fri_tree_depths: &Vec<usize>,
-    pub_coin_seed_len: usize
+    pub_coin_seed_len: usize,
 ) -> Result<(), Error>
 where
     E: StarkField,
@@ -42,11 +42,11 @@ where
             .join(", ")
     );
 
-    let mut file = File::create(filename.to_owned() + "_verifier.circom")?;
+    let mut file = File::create(format!("target/circom/{}/verifier.circom", circuit_name))?;
 
     file.write("pragma circom 2.0.0;\n\n".as_bytes())?;
-    file.write("include \"circuits/verify.circom\";\n".as_bytes())?;
-    file.write(format!("include \"circuits/air/{}.circom\";\n\n", filename).as_bytes())?;
+    file.write("include \"../../../circuits/verify.circom\";\n".as_bytes())?;
+    file.write(format!("include \"../../../circuits/air/{}.circom\";\n\n", circuit_name).as_bytes())?;
     file.write("component main {public [ood_frame_constraint_evaluation, ood_trace_frame]}= Verify(\n".as_bytes())?;
     file.write(
         format!(

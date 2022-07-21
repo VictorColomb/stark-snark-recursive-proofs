@@ -1,4 +1,4 @@
-use winter_circom_prover::prepare_circom_verification;
+use winter_circom_prover::circom_verification;
 use winter_math::{fields::f256::BaseElement, FieldElement};
 use winter_prover::{FieldExtension, HashFunction, ProofOptions};
 
@@ -10,7 +10,7 @@ use prover::WorkProver;
 fn main() {
     // computation parameters
     let start = BaseElement::ONE;
-    let trace_length = 256;
+    let trace_length = 128;
 
     // Define proof options; these will be enough for ~96-bit security level.
     let options = ProofOptions::new(
@@ -27,5 +27,5 @@ fn main() {
     let prover = WorkProver::new(options.clone());
     let trace = prover.build_trace(start, trace_length);
 
-    prepare_circom_verification(prover, trace, "sum");
+    circom_verification(prover, trace, "sum");
 }
