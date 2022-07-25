@@ -520,7 +520,7 @@ def print_vector(name:str,M):
 
 
 # Init
-print("pragma circom 2.0.4;")
+print("pragma circom 2.0.0;")
 
 init_generator(FIELD, SBOX, FIELD_SIZE, NUM_CELLS, R_F_FIXED, R_P_FIXED)
 

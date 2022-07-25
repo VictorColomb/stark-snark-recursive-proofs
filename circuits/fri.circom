@@ -1,4 +1,4 @@
-pragma circom 2.0.4;
+pragma circom 2.0.0;
 
 include "utils.circom";
 include "merkle.circom";
@@ -44,7 +44,7 @@ template FriVerifier(
     component folding_roots;
     component layer_commitment_verifiers[num_fri_layers];
     component layer_queries_divisions[num_fri_layers][num_queries];
-    component layer_queries_lookups[num_fri_layers][num_queries];
+    component layer_queries_lookups[num_fri_layers];
     component layer_query_selectors[num_fri_layers];
     component remainder_degree;
     component remainder_length_lt;
@@ -130,25 +130,27 @@ template FriVerifier(
             for (var i = 0; i < fri_num_queries[0] * folding_factor; i++) {
                 layer_query_selectors[0].in[i] <== fri_layer_queries[0][i];
             }
+
+            layer_queries_lookups[0] = MultiIndexLookup(fri_num_queries[0], num_queries);
+            for (var j = 0; j < fri_num_queries[0]; j++) {
+                layer_queries_lookups[0].in[j] <== folded_positions[0].out[j];
+            }
             for (var i = 0; i < num_queries; i++) {
                 // integer division of position (query_positions[i]) by row_length
                 layer_queries_divisions[0][i] = IntegerDivision(row_length, tree_depth);
                 layer_queries_divisions[0][i].in <== query_positions[i];
 
                 // find index of position % row_length in query_positions
-                layer_queries_lookups[0][i] = IndexLookup(fri_num_queries[0]);
-                layer_queries_lookups[0][i].lookup <== layer_queries_divisions[0][i].remainder;
-                for (var j = 0; j < fri_num_queries[0]; j++) {
-                    layer_queries_lookups[0][i].in[j] <== folded_positions[0].out[j];
-                }
-
+                layer_queries_lookups[0].lookup[i] <== layer_queries_divisions[0][i].remainder;
+            }
+            for (var i = 0; i < num_queries; i++) {
                 // pick fri_layer_queries[depth][idx * folding_factor + position \ row_length]
                 // (where idx = layer_queries_lookups[depth][i].out)
-                layer_query_selectors[0].indexes[i] <== layer_queries_lookups[0][i].out * folding_factor + layer_queries_divisions[0][i].quotient;
+                layer_query_selectors[0].indexes[i] <== layer_queries_lookups[0].out[i] * folding_factor + layer_queries_divisions[0][i].quotient;
             }
             for (var i = 0; i < num_queries; i++) {
                 // verify that query_values == deep_evaluations
-                // (where query_values = layer_query_selectors[depth][?].out)
+                // (where query_values = layer_query_selectors[depth].out)
                 layer_query_selectors[0].out[i] === deep_evaluations[i];
             }
         } else {
@@ -157,21 +159,23 @@ template FriVerifier(
             for (var i = 0; i < fri_num_queries[depth] * folding_factor; i++) {
                 layer_query_selectors[depth].in[i] <== fri_layer_queries[depth][i];
             }
+
+            layer_queries_lookups[depth] = MultiIndexLookup(fri_num_queries[depth], fri_num_queries[depth - 1]);
+            for (var j = 0; j < fri_num_queries[depth]; j++) {
+                layer_queries_lookups[depth].in[j] <== folded_positions[depth].out[j];
+            }
             for (var i = 0; i < fri_num_queries[depth - 1]; i++) {
                 // integer division of position (folded_positions[depth - 1].out[i]) by row_length
                 layer_queries_divisions[depth][i] = IntegerDivision(row_length, fri_tree_depths[depth - 1]);
                 layer_queries_divisions[depth][i].in <== folded_positions[depth - 1].out[i];
 
                 // find index of position % row_length in folded_positions[depth]
-                layer_queries_lookups[depth][i] = IndexLookup(fri_num_queries[depth]);
-                layer_queries_lookups[depth][i].lookup <== layer_queries_divisions[depth][i].remainder;
-                for (var j = 0; j < fri_num_queries[depth]; j++) {
-                    layer_queries_lookups[depth][i].in[j] <== folded_positions[depth].out[j];
-                }
-
+                layer_queries_lookups[depth].lookup[i] <== layer_queries_divisions[depth][i].remainder;
+            }
+            for (var i = 0; i < fri_num_queries[depth - 1]; i++) {
                 // pick fri_layer_queries[depth][idx * folding_factor + position \ row_length]
                 // (where idx = layer_queries_lookups[depth][i].out)
-                layer_query_selectors[depth].indexes[i] <== layer_queries_lookups[depth][i].out * folding_factor + layer_queries_divisions[depth][i].quotient;
+                layer_query_selectors[depth].indexes[i] <== layer_queries_lookups[depth].out[i] * folding_factor + layer_queries_divisions[depth][i].quotient;
             }
             for (var i = 0; i < fri_num_queries[depth - 1]; i++) {
                 layer_query_selectors[depth].out[i] === evaluations[depth - 1][i].out;

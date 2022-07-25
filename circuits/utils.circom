@@ -1,4 +1,4 @@
-pragma circom 2.0.4;
+pragma circom 2.0.0;
 
 include "poseidon/poseidon.circom";
 
@@ -51,6 +51,7 @@ template Pow(exp) {
     out <== inter[buffer_size - 1];
 }
 
+
 /**
  * Exponentiation with a signal as exponent.
  *
@@ -63,10 +64,6 @@ template Pow(exp) {
  *
  * OUTPUTS:
  * - out: x**exp
- *
- * TODO:
- * -  Test if converting the n argument to a template that automates it
- * -  is worth it constraint wise.
  */
 template Pow_signal(n) {
     signal input in;
@@ -93,17 +90,26 @@ template Pow_signal(n) {
     out <== inter[n-1];
 }
 
+
+/**
+ * Number of bits of an field element.
+ */
 function numbits(n) {
     var k = 0;
     while (n != 0) {
-        n\=2;
-        k+=1;
+        n \= 2;
+        k += 1;
     }
     return k;
 }
 
 
-
+/**
+ * Convert a field element into binary representation.
+ *
+ * ARGUMENTS:
+ * - n: buffer size. must be greater than log2 of the input
+ */
 template Num2Bits(n) {
     signal input in;
     signal output out[n];
@@ -120,19 +126,26 @@ template Num2Bits(n) {
     lc1 === in;
 }
 
+/**
+ * Convert a binary representation into a field element.
+ *
+ * ARGUMENTS:
+ * - n: input length (number of bits)
+ */
 template Bits2Num(n) {
     signal input in[n];
     signal output out;
     var lc1=0;
 
     var e2 = 1;
-    for (var i = 0; i<n; i++) {
+    for (var i = 0; i < n; i++) {
         lc1 += in[i] * e2;
         e2 = e2 + e2;
     }
 
     lc1 ==> out;
 }
+
 
 /**
  * Remove duplicates from a list with specified number of inputs.
@@ -193,7 +206,7 @@ template MultiplierN(N) {
     signal input in[N];
     signal output out;
 
-    signal inter[N-1];
+    signal inter[N - 1];
 
     inter[0] <== in[0] * in[1];
     for(var i = 0; i < N - 2; i++){
@@ -264,80 +277,66 @@ template Switcher() {
     outR <== R - aux;
 }
 
+
 /**
- * Find the index of an element in a list.
- * Only works if the element appears only once in the list.
+ * Find the indexes of multiple elements in an array.
+ * Only works if each looked up element appears only once in the list!
  *
- * ARGUMENTS: choice (list length)
+ * ARGUMENTS:
+ * - input_len: length of the array
+ * - num_lookup: number of indexes to look for
  *
  * INPUTS:
- * - in[choices]: the list to look into
- * - lookup: the value whose index we are looking for
+ * - in[input_len]: array to look into
+ * - lookup[num_lookup]: elements whose indexes we are looking for
+ *
+ * OUTPUTS: out[num_lookup]
+ *
+ * TODO: make the template work if an element appears multiple times
+ */
+template MultiIndexLookup(input_len, num_lookup) {
+    signal input in[input_len];
+    signal input lookup[num_lookup];
+    signal output out[num_lookup];
+
+    component eq[num_lookup][input_len];
+
+    for (var i = 0; i < num_lookup; i++) {
+        var index = 0;
+
+        for (var j = 0; j < input_len; j++) {
+            eq[i][j] = IsEqual();
+            eq[i][j].in[0] <== lookup[i];
+            eq[i][j].in[1] <== in[j];
+
+            index += j * eq[i][j].out;
+        }
+
+        out[i] <== index;
+    }
+}
+
+
+/**
+ * Select a element in an array with a signal as index.
+ *
+ * ARGUMENTS: input_len
+ *
+ * INPUTS:
+ * - in[input_len]: array to look into
+ * - index
  *
  * OUTPUTS: out
- *
- * TODO: create MultiIndexLookup
  */
-template IndexLookup(choices) {
-    signal input in[choices];
-    signal input lookup;
-    signal output out;
-
-    component eq[choices];
-
-    var index = 0;
-    for (var i = 0; i < choices; i++) {
-        eq[i] = IsEqual();
-        eq[i].in[0] <== lookup;
-        eq[i].in[1] <== in[i];
-
-        index += i * eq[i].out;
-    }
-
-    out <== index;
-}
-
-template MultiSelector(len_input, num_indexes) {
-    signal input in[len_input];
-    signal input indexes[num_indexes];
-    signal output out[num_indexes];
-
-    signal sum[num_indexes][len_input];
-    component eqs[num_indexes][len_input];
-
-    for(var k = 0; k < num_indexes; k++) {
-
-        // For each item, check whether its index equals the input index.
-        for (var i = 0; i < len_input; i ++) {
-            eqs[k][i] = IsEqual();
-            eqs[k][i].in[0] <== i;
-            eqs[k][i].in[1] <== indexes[k];
-
-            // eqs[k][i].out is 1 if the index matches. As such, at most one input to
-            // calcTotal is not 0.
-            if (i == 0) {
-                sum[k][i] <== eqs[k][i].out * in[i];
-            } else {
-                sum[k][i] <== sum[k][i - 1] + eqs[k][i].out * in[i];
-            }
-        }
-
-        // Returns 0 + 0 + 0 + item
-        out[k] <== sum[k][len_input - 1];
-
-        }
-}
-
-template Selector(len_input) {
-    signal input in[len_input];
+template Selector(input_len) {
+    signal input in[input_len];
     signal input index;
     signal output out;
 
-    signal sum[len_input];
-    component eqs[len_input];
-
+    signal sum[input_len];
+    component eqs[input_len];
     // For each item, check whether its index equals the input index.
-    for (var i = 0; i < len_input; i ++) {
+    for (var i = 0; i < input_len; i ++) {
         eqs[i] = IsEqual();
         eqs[i].in[0] <== i;
         eqs[i].in[1] <== index;
@@ -352,24 +351,51 @@ template Selector(len_input) {
     }
 
     // Returns 0 + 0 + 0 + item
-    out <== sum[len_input - 1];
-
+    out <== sum[input_len - 1];
 }
 
-template CalculateTotal(n) {
-    signal input in[n];
-    signal output out;
+/**
+ * Select multiple elements in an array, with signals as indexes.
+ *
+ * ARGUMENTS:
+ * - input_len
+ * - num_indexes
+ *
+ * INPUTS:
+ * - in[input_len]: array to look into
+ * - indees[num_indexes]
+ *
+ * OUTPUTS: out[num_indexes]
+ */
+template MultiSelector(input_len, num_indexes) {
+    signal input in[input_len];
+    signal input indexes[num_indexes];
+    signal output out[num_indexes];
 
-    signal sums[n];
+    signal sum[num_indexes][input_len];
+    component eqs[num_indexes][input_len];
 
-    sums[0] <== in[0];
+    for(var k = 0; k < num_indexes; k++) {
+        // For each item, check whether its index equals the input index.
+        for (var i = 0; i < input_len; i ++) {
+            eqs[k][i] = IsEqual();
+            eqs[k][i].in[0] <== i;
+            eqs[k][i].in[1] <== indexes[k];
 
-    for (var i = 1; i < n; i++) {
-        sums[i] <== sums[i-1] + in[i];
+            // eqs[k][i].out is 1 if the index matches. As such, at most one input to
+            // calcTotal is not 0.
+            if (i == 0) {
+                sum[k][i] <== eqs[k][i].out * in[i];
+            } else {
+                sum[k][i] <== sum[k][i - 1] + eqs[k][i].out * in[i];
+            }
+        }
+
+        // Returns 0 + 0 + 0 + item
+        out[k] <== sum[k][input_len - 1];
     }
-
-    out <== sums[n-1];
 }
+
 
 /**
  * Perform an integer division on a field element, providing the quotient and

@@ -1,4 +1,4 @@
-pragma circom 2.0.4;
+pragma circom 2.0.0;
 
 include "poseidon/poseidon.circom";
 include "utils.circom";
@@ -50,6 +50,8 @@ template PublicCoin(
     trace_length,
     trace_width
 ) {
+    var num_seeds = 6 + num_fri_layers + 1;
+
     signal input constraint_commitment;
     signal input fri_commitments[num_fri_layers + 1];
     signal input ood_constraint_evaluations[trace_width];
@@ -67,17 +69,28 @@ template PublicCoin(
     signal output transition_coeffs[num_transition_constraints][2];
     signal output z;
 
-    var num_seeds = 6 + num_fri_layers + 1;
-    component reseed[num_seeds];
-    component init = Poseidon(num_pub_coin_seed);
+    signal query_draws[num_draws];
 
-    // 0 - Initialize public coin seed with public inputs and context serialized
+    component constraint_coin;
+    component bits2num[num_draws];
+    component deep_coin[3 * trace_width + ce_blowup_factor + 2];
+    component fri_coin[num_fri_layers + 1];
+    component init = Poseidon(num_pub_coin_seed);
+    component num2bits[num_draws];
+    component query_coin[num_draws];
+    component remove_duplicates;
+    component reseed[num_seeds];
+    component trace_coin[num_transition_constraints + num_assertions][2];
+
+
+    // 0 - INITIALIZE PUBLIC COIN
 
     for (var i = 0; i < num_pub_coin_seed; i++) {
         init.in[i] <== pub_coin_seed[i];
     }
 
-    // 1 - Reseeding with trace commitment
+
+    // 1 - RESEED WITH TRACE COMMITMENT
 
     var k = 0;
     reseed[k] = Reseed(1);
@@ -85,7 +98,6 @@ template PublicCoin(
     reseed[k].in[0] <== trace_commitment;
 
     // drawing transition and constraint coefficients for OOD consistency check
-    component trace_coin[num_transition_constraints + num_assertions][2];
     for (var i = 0; i < num_transition_constraints; i++) {
         for (var j = 0; j < 2; j++){
             trace_coin[i][j] = Poseidon(2);
@@ -105,8 +117,7 @@ template PublicCoin(
     }
 
 
-
-    // 2 - Reseeding with constraint commitment
+    // 2 - RESEED WITH CONSTRAINT COMMITMENT
 
     k += 1;
     reseed[k] = Reseed(1);
@@ -114,15 +125,13 @@ template PublicCoin(
     reseed[k].in[0] <== constraint_commitment;
 
     // OOD point for evaluations
-    component constraint_coin = Poseidon(2);
+    constraint_coin = Poseidon(2);
     constraint_coin.in[0] <== reseed[k].out;
     constraint_coin.in[1] <== 1;
     z <== constraint_coin.out;
 
 
-
-    // 3 - Reseeding with ood_trace_frame
-
+    // 3 - RESEED WITH OOD TRACE FRAME
 
     k += 1;
     reseed[k] = Reseed(trace_width);
@@ -131,7 +140,6 @@ template PublicCoin(
         reseed[k].in[i] <== ood_trace_frame[0][i];
     }
 
-
     k += 1;
     reseed[k] = Reseed(trace_width);
     reseed[k].prev_seed <== reseed[k-1].out;
@@ -139,7 +147,8 @@ template PublicCoin(
         reseed[k].in[i] <== ood_trace_frame[1][i];
     }
 
-    // 4 - Reseeding with OOD constraint evaluations
+
+    // 4 - RESEED WITH OOD CONSTRAINT EVALUATIONS
 
     k += 1;
     reseed[k] = Reseed(ce_blowup_factor);
@@ -148,9 +157,7 @@ template PublicCoin(
         reseed[k].in[i] <== ood_constraint_evaluations[i];
     }
 
-
     // drawing all coefficient needed for the DEEP composition polynomial
-    component deep_coin[3 * trace_width + ce_blowup_factor + 2];
     for (var i = 0; i < trace_width; i++){
         for (var j = 0; j < 3; j++){
         deep_coin[3 * i + j] = Poseidon(2);
@@ -174,10 +181,9 @@ template PublicCoin(
     }
 
 
-    // drawing alphas for fri verification
-    component fri_coin[num_fri_layers + 1];
-    for (var i = 0; i < num_fri_layers + 1; i++) {
+    // 5 - DRAW FRI ALPHAS + RESEED WITH FRI COMMITMENTS
 
+    for (var i = 0; i < num_fri_layers + 1; i++) {
         // reseeding with FRI commitments
         k += 1;
         reseed[k] = Reseed(1);
@@ -191,7 +197,7 @@ template PublicCoin(
     }
 
 
-    // 5 - Reseeding with proof of work
+    // 6 - PROOF OF WORK
 
     k += 1;
     reseed[k] = Reseed(1);
@@ -205,14 +211,11 @@ template PublicCoin(
         pow_num2bit.out[i] === 0;
     }
 
-    // drawing querypositions
-    // could be optimized to divide the number of hashes by 4, but we would also
-    // need to implement the same optimization in Winterfell.
-    component query_coin[num_draws];
-    component remove_duplicates = RemoveDuplicates(num_draws,num_queries);
-    component num2bits[num_draws];
-    component bits2num[num_draws];
-    signal query_draws[num_draws];
+    // DRAW QUERY POSITIONS
+
+    // TODO: divide number of hashes by 4
+    // winterfell protocol has to be modified to match
+    remove_duplicates = RemoveDuplicates(num_draws,num_queries);
 
     // compute the size of the query elements in bits
     var bit_mask = trace_length * lde_blowup_factor;
@@ -238,19 +241,21 @@ template PublicCoin(
     for (var i = 0; i < num_queries; i++){
         query_positions[i] <== remove_duplicates.out[i];
     }
-
 }
 
 
+/**
+ * Reseed public coin -- new seed = hash(old seed, input)
+ */
 template Reseed(input_len) {
-
     signal input in[input_len];
     signal input prev_seed;
     signal output out;
+
     component hash = Poseidon(2);
     component hash_data;
     hash.in[0] <== prev_seed;
-    
+
     if (input_len == 1) {
         hash.in[1] <== in[0];
     } else {
@@ -260,6 +265,6 @@ template Reseed(input_len) {
         }
         hash.in[1] <== hash_data.out;
     }
-    out <== hash.out;
 
+    out <== hash.out;
 }

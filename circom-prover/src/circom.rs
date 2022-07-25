@@ -6,10 +6,11 @@ use std::{
 };
 
 use rug::{ops::Pow, Float};
-use winter_air::{Air, HashFunction};
-use winter_crypto::hashers::Poseidon;
-use winter_math::{fields::f256::BaseElement, log2, StarkField};
-use winter_prover::Prover;
+use winterfell::{
+    crypto::hashers::Poseidon,
+    math::{fields::f256::BaseElement, log2, StarkField},
+    Prover, Air, HashFunction
+};
 
 use crate::{json::proof_to_json, WinterPublicInputs};
 
@@ -63,7 +64,7 @@ where
 
     #[cfg(debug_assertions)]
     assert!(
-        winter_verifier::verify::<P::Air>(proof.clone(), pub_inputs.clone()).is_ok(),
+        winterfell::verify::<P::Air>(proof.clone(), pub_inputs.clone()).is_ok(),
         "invalid proof"
     );
 

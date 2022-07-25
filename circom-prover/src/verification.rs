@@ -1,9 +1,11 @@
 use std::fs;
 
-use winter_air::{Air, EvaluationFrame};
-use winter_math::{
-    fields::f256::{BaseElement, U256},
-    FieldElement,
+use winterfell::{
+    math::{
+        fields::f256::{BaseElement, U256},
+        FieldElement,
+    },
+    Air, EvaluationFrame,
 };
 
 /// Check that the OOD trace frame corresponds to the given Air and the OOD
@@ -69,5 +71,8 @@ where
         );
     }
 
-    println!("\x1b[32m{}\x1b[0m", "OOD constraint evaluations are correct!");
+    println!(
+        "\x1b[32m{}\x1b[0m",
+        "OOD constraint evaluations are correct!"
+    );
 }

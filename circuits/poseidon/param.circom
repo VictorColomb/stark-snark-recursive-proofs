@@ -1,4 +1,4 @@
-pragma circom 2.0.4;
+pragma circom 2.0.0;
 function T() {
 return 4 ;}
 

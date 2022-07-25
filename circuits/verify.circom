@@ -1,4 +1,4 @@
-pragma circom 2.0.4;
+pragma circom 2.0.0;
 
 include "fri.circom";
 include "merkle.circom";
@@ -266,12 +266,10 @@ template Verify(
     }
 
     for (var i = 0; i < num_queries; i++) {
-
         for (var j = 0; j < trace_width; j++) {
             // DEEP trace composition
             trace_div[i][j][0] <-- (trace_evaluations[i][j] - ood_trace_frame[0][j]) / (multi_sel.out[i] - pub_coin.z);
             trace_div[i][j][0] * (multi_sel.out[i] - pub_coin.z) === trace_evaluations[i][j] - ood_trace_frame[0][j];
-
 
             deep_temp[i][j] <== multi_sel.out[i] - pub_coin.z * g_trace;
             trace_div[i][j][1] <-- (trace_evaluations[i][j] - ood_trace_frame[1][j]) / deep_temp[i][j];
@@ -280,7 +278,6 @@ template Verify(
             trace_deep_composition[i][j][0] <== pub_coin.deep_trace_coefficients[j][0] * trace_div[i][j][0];
 
             // DEEP constraint composition
-
             if (j == 0) {
                 trace_deep_composition[i][j][1] <== trace_deep_composition[i][j][0]+ pub_coin.deep_trace_coefficients[j][1] * trace_div[i][j][1];
 

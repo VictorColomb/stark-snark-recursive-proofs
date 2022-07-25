@@ -1,14 +1,14 @@
 [workspace]
 members = [
-  "utils/core",
-  "utils/rand",
-  "math",
-  "crypto",
-  "fri",
-  "air",
-  "prover",
-  "verifier",
-  "winterfell",
+  "winterfell/utils/core",
+  "winterfell/utils/rand",
+  "winterfell/math",
+  "winterfell/crypto",
+  "winterfell/fri",
+  "winterfell/air",
+  "winterfell/prover",
+  "winterfell/verifier",
+  "winterfell/winterfell",
   "circom-prover"
 ]
 

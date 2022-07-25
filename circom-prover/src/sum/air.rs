@@ -1,12 +1,10 @@
 use serde::{ser::SerializeTuple, Serialize};
-use winter_air::{
-    Air, AirContext, Assertion, EvaluationFrame, ProofOptions, TraceInfo,
-    TransitionConstraintDegree,
-};
 use winter_circom_prover::WinterPublicInputs;
-use winter_math::{fields::f256::BaseElement, FieldElement};
-use winter_prover::ByteWriter;
-use winter_utils::Serializable;
+use winterfell::{
+    math::{fields::f256::BaseElement, FieldElement},
+    Air, AirContext, Assertion, ByteWriter, EvaluationFrame, FieldExtension, HashFunction,
+    ProofOptions, TraceInfo, TransitionConstraintDegree, Serializable
+};
 
 #[derive(Clone, Default)]
 pub struct PublicInputs {
@@ -98,8 +96,8 @@ impl Default for WorkAir {
                 32,
                 8,
                 0,
-                winter_air::HashFunction::Poseidon,
-                winter_air::FieldExtension::None,
+                HashFunction::Poseidon,
+                FieldExtension::None,
                 8,
                 256,
             ),

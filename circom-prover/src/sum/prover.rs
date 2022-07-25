@@ -1,7 +1,8 @@
 use super::air::{PublicInputs, WorkAir};
-use winter_air::ProofOptions;
-use winter_math::{fields::f256::BaseElement, FieldElement};
-use winter_prover::{Prover, Trace, TraceTable};
+use winterfell::{
+    math::{fields::f256::BaseElement, FieldElement},
+    Prover, Trace, TraceTable, ProofOptions
+};
 
 pub struct WorkProver {
     options: ProofOptions,

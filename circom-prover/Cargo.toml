@@ -5,21 +5,15 @@ edition = "2021"
 rust-version = "1.60"
 
 [features]
-std = ["winter-crypto/std", "winter-math/std", "winter-prover/std", "winter-verifier/std", "winter-air/std", "winter-utils/std", "serde/std", "serde_json/std"]
+std = ["winterfell/std", "serde/std", "serde_json/std"]
 default = ["std"]
-concurrent = ["std", "winter-crypto/concurrent", "winter-math/concurrent", "winter-prover/concurrent", "winter-utils/concurrent"]
+concurrent = ["std", "winterfell/concurrent"]
 
 [dependencies]
 rug = "1.16"
-winter-crypto = { version = "0.4.0", default-features = false, path = "../crypto" }
-winter-math = { version = "0.4.0", default-features = false, path = "../math" }
-winter-prover = { version = "0.4.0", default-features = false, path = "../prover" }
-winter-verifier = { version = "0.4.0", default-features = false, path = "../verifier" }
-winter-air = { version = "0.4.0", default-features = false, path = "../air" }
-winter-fri = { version = "0.4.0", default-features = false, path = "../fri" }
+winterfell = { version = "0.4.0", default-features = false, path = "../winterfell/winterfell" }
 serde = { version = "1.0", default-features = false }
 serde_json = { version = "1.0", default-features = false }
-winter-utils = { version = "0.4.0", default-features = false, path = "../utils/core" }
 
 [[bin]]
 name = "sum_prove"

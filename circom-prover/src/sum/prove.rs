@@ -1,6 +1,8 @@
 use winter_circom_prover::circom_prove;
-use winter_math::{fields::f256::BaseElement, FieldElement};
-use winter_prover::{FieldExtension, HashFunction, ProofOptions};
+use winterfell::{
+    math::{fields::f256::BaseElement, FieldElement},
+    FieldExtension, HashFunction, ProofOptions,
+};
 
 mod air;
 

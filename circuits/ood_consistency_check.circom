@@ -1,4 +1,4 @@
-pragma circom 2.0.4;
+pragma circom 2.0.0;
 
 
 /**
@@ -39,28 +39,38 @@ template OodConsistencyCheck(
     signal input transition_coeffs[trace_width][2];
     signal input z;
 
+    signal boundary_temp[num_assertions];
+    signal boundary_temp_2[num_assertions];
+    signal channel_ood_pow[trace_width];
+    signal evaluation_result[trace_width + num_assertions];
+    signal transition_divisor;
+    signal transition_result;
+    signal transition_temp[trace_width];
 
-    // building transition divisor
+    component AIR;
+    component boundary_deg_adjustment[num_assertions];
+    component evaluate_boundary_constraints;
+    component gpstep[num_assertions];
+    component gp_trace_len;
+    component transition_deg_adjustment[trace_width];
+    component xpn;
+
+
+
+    // BUILDING TRANSITION DIVISOR
     // for transition constraints, it is always the same : div(x) = (x**n)/(product i : 1 --> k : (x - g ** (n - i)))
     // The above divisor specifies that transition constraints must hold on all steps of the execution trace except for the last k steps.
     // The default value for k is 1, n represent the trace length
 
-    component gp_trace_len = Pow(trace_length - 1);
+    gp_trace_len = Pow(trace_length - 1);
     gp_trace_len.in <== g_trace;
 
-    component xpn = Pow(trace_length);
+    xpn = Pow(trace_length);
     xpn.in <== z;
-    signal transition_divisor;
-    transition_divisor <-- (xpn.out - 1) / ( z - gp_trace_len.out);
+    transition_divisor <-- (xpn.out - 1) / (z - gp_trace_len.out);
     transition_divisor * (z - gp_trace_len.out) === xpn.out - 1;
 
-
-    signal evaluation_result[trace_width + num_assertions];
-
-    component transition_deg_adjustment[trace_width];
-    component AIR = AIRTransitions(trace_width);
-
-    signal transition_temp[trace_width];
+    AIR = AIRTransitions(trace_width);
     for (var i = 0; i < trace_width; i++) {
         transition_deg_adjustment[i] = Pow_signal(numbits(trace_length * ce_blowup_factor - 1));
         transition_deg_adjustment[i].in <== z;
@@ -75,14 +85,13 @@ template OodConsistencyCheck(
 
     }
 
-    signal transition_result;
     transition_result <-- evaluation_result[trace_width - 1] / transition_divisor;
     transition_result * transition_divisor ===  evaluation_result[trace_width - 1];
 
 
     // BOUNDARY CONSTRAINTS EVALUATIONS
 
-    component evaluate_boundary_constraints = AIRAssertions(
+    evaluate_boundary_constraints = AIRAssertions(
         num_assertions,
         num_public_inputs,
         trace_length,
@@ -102,10 +111,6 @@ template OodConsistencyCheck(
     }
 
 
-    component boundary_deg_adjustment[num_assertions];
-    component gpstep[num_assertions];
-    signal boundary_temp[num_assertions];
-    signal boundary_temp_2[num_assertions];
     for (var i = 0; i < num_assertions; i++) {
         boundary_deg_adjustment[i] = Pow_signal(255);
         boundary_deg_adjustment[i].in <== z;
@@ -135,9 +140,8 @@ template OodConsistencyCheck(
     // a single value by computing sum(z^i * value_i), where value_i is the evaluation of the ith
     // column polynomial at z^m, where m is the total number of column polynomials
 
-    signal channel_ood_pow[trace_width ];
     channel_ood_pow[0] <== 1;
-    var channel_result = channel_ood_evaluations[0] ;
+    var channel_result = channel_ood_evaluations[0];
     for (var i = 1; i < trace_width; i++) {
         channel_ood_pow[i] <== z * channel_ood_pow[i-1];
         channel_result += channel_ood_evaluations[i] * channel_ood_pow[i];

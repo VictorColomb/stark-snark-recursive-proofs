@@ -1,4 +1,4 @@
-pragma circom 2.0.4;
+pragma circom 2.0.0;
 
 include "param.circom";
 
@@ -129,9 +129,9 @@ template PoseidonPerm(t) {
     component mix[n_f_rounds + 1];
     component mixS[n_p_rounds];
 
-    //first full rounds
+    // first full rounds
     for (var r = 0; r < n_f_rounds/2; r++) {
-        //add round constants
+        // add round constants
         ark[r] = Ark(t, C, r * t);
         for (var j = 0; j < t; j++) {
             if (r == 0) {
@@ -142,7 +142,7 @@ template PoseidonPerm(t) {
         }
 
         // apply sbox
-        for (var j=0; j<t; j++) {
+        for (var j = 0; j < t; j++) {
             sigmaF[r][j] = Sigma();
             sigmaF[r][j].in <== ark[r].out[j];
         }
@@ -160,7 +160,7 @@ template PoseidonPerm(t) {
         ark[n_f_rounds / 2].in[j] <== mix[n_f_rounds/2 - 1].out[j];
     }
 
-    mix[n_f_rounds / 2] = Mix(t,P);
+    mix[n_f_rounds / 2] = Mix(t, P);
     for (var j = 0; j < t; j++) {
         mix[n_f_rounds / 2].in[j] <== ark[n_f_rounds / 2].out[j];
     }
@@ -168,18 +168,18 @@ template PoseidonPerm(t) {
     // partial rounds
     for (var r = 0; r < n_p_rounds - 1; r++) {
         sigmaP[r] = Sigma();
-        if (r==0) {
+        if (r == 0) {
             sigmaP[r].in <== mix[n_f_rounds/2].out[0];
         } else {
             sigmaP[r].in <== mixS[r-1].out[0];
         }
 
         mixS[r] = MixS(t, S, n_p_rounds - 1 - r);
-        for (var j=0; j<t; j++) {
-            if (j==0) {
+        for (var j = 0; j < t; j++) {
+            if (j == 0) {
                 mixS[r].in[j] <== sigmaP[r].out + C[(n_f_rounds/2+1)*t + r];
             } else {
-                if (r==0) {
+                if (r == 0) {
                     mixS[r].in[j] <== mix[n_f_rounds/2].out[j];
                 } else {
                     mixS[r].in[j] <== mixS[r-1].out[j];
@@ -201,28 +201,28 @@ template PoseidonPerm(t) {
     //second round of full rounds
     for (var r = n_f_rounds/2 ; r < n_f_rounds; r++) {
         //add round constants
-        ark[r+1] = Ark(t, C, n_p_rounds - 1 + (r+1) * t);
-        for (var j=0; j<t; j++) {
-            if (r==n_f_rounds/2) {
-                ark[r+1].in[j] <== mixS[n_p_rounds - 1].out[j];
+        ark[r + 1] = Ark(t, C, n_p_rounds - 1 + (r+1) * t);
+        for (var j = 0; j < t; j++) {
+            if (r == n_f_rounds/2) {
+                ark[r + 1].in[j] <== mixS[n_p_rounds - 1].out[j];
             } else {
-                ark[r+1].in[j] <== mix[r].out[j];
+                ark[r + 1].in[j] <== mix[r].out[j];
             }
         }
 
         // apply sbox
-        for (var j=0; j<t; j++) {
+        for (var j = 0; j < t; j++) {
             sigmaF[r][j] = Sigma();
             sigmaF[r][j].in <== ark[r + 1].out[j];
         }
 
         mix[r+1] = Mix(t,M);
-        for (var j=0; j<t; j++) {
+        for (var j = 0; j < t; j++) {
             mix[r+1].in[j] <== sigmaF[r][j].out;
         }
     }
 
-    for (var j=0; j<t; j++) {
+    for (var j = 0; j < t; j++) {
         out[j] <== mix[n_f_rounds].out[j];
     }
 }
@@ -303,26 +303,26 @@ template Sponge(l, t, c) {
     for (var i = 0; i < l\rate; i++) {
         // absorb rate elements into the state
         for (var j = 0; j < rate; j++) {
-            state[2*i+1][j] <== state[2*i][j] + in[i*rate+j];
+            state[2*i + 1][j] <== state[2*i][j] + in[i*rate + j];
         }
         // copy the other elements
         for (var j = rate; j < t; j++) {
-            state[2*i+1][j] <== state[2*i][j];
+            state[2*i + 1][j] <== state[2*i][j];
         }
 
         // apply the permutation
         permutation[i] = PoseidonPerm(t);
         for (var j = 0; j < t; j++) {
-            permutation[i].in[j] <== state[2*i+1][j];
+            permutation[i].in[j] <== state[2*i + 1][j];
         }
         for (var j = 0; j < t; j++) {
-            state[2*i+2][j] <== permutation[i].out[j];
+            state[2*i + 2][j] <== permutation[i].out[j];
         }
     }
 
     // output
     for (var k = 0; k < rate; k++) {
-        out[k] <== state[2*(l/rate)][k];
+        out[k] <== state[2 * (l/rate)][k];
     }
 }
 
@@ -346,7 +346,7 @@ template Poseidon(l_inputs) {
     var capacity = 1;
 
     component h = PoseidonHash(l_inputs, state_width, capacity);
-    for (var i=0; i<l_inputs; i++) {
+    for (var i=0; i < l_inputs; i++) {
         h.in[i] <== in[i];
     }
     out <== h.out[0];

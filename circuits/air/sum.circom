@@ -1,10 +1,9 @@
-pragma circom 2.0.4;
+pragma circom 2.0.0;
 
 include "../utils.circom";
 
 /**
  * Define the degree for the transitions constraints.
- * 
  *
  * INPUTS:
  * - frame: Out Of Domain frame on which we will check the
@@ -66,7 +65,6 @@ template AIRAssertions(
     signal register[num_assertions];
 
     /* HERE YOUR ASSERTIONS HERE */
-
 
     value[0] <== public_inputs[0];
     step[0] <== 0;

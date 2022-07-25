@@ -1,10 +1,10 @@
 use serde::Serialize;
 use serde_json::{json, Value};
-use winter_air::Air;
-use winter_crypto::{Digest, ElementHasher, RandomCoin};
-use winter_fri::folding::fold_positions;
-use winter_math::{fields::f256::BaseElement, log2, FieldElement, StarkField};
-use winter_prover::{Serializable, StarkProof};
+use winterfell::{
+    crypto::{Digest, ElementHasher, RandomCoin},
+    math::{fields::f256::BaseElement, log2, FieldElement, StarkField},
+    Serializable, StarkProof, Air
+};
 
 /// Parse a [StarkProof] into a Circom-usable JSON object.
 ///
@@ -137,7 +137,11 @@ where
     // OOD FRAME CONSTRAINT EVALUATIONS
     // FIXME: fix periodic values
     let mut ood_frame_constraint_evaluation = BaseElement::zeroed_vector(air.trace_info().width());
-    air.evaluate_transition::<BaseElement>(&ood_trace_frame, &[], &mut ood_frame_constraint_evaluation);
+    air.evaluate_transition::<BaseElement>(
+        &ood_trace_frame,
+        &[],
+        &mut ood_frame_constraint_evaluation,
+    );
 
     let ood_trace_frame = (ood_trace_frame.current(), ood_trace_frame.next());
 
@@ -163,7 +167,9 @@ where
 
     public_coin.reseed_with_int(pow_nonce);
 
-    let query_positions = public_coin.draw_integers(num_queries, lde_domain_size).unwrap();
+    let query_positions = public_coin
+        .draw_integers(num_queries, lde_domain_size)
+        .unwrap();
 
     // FRI PROOF PART 2
     // ===========================================================================
@@ -302,4 +308,26 @@ where
         "trace_evaluations": trace_evaluations,
         "trace_query_proofs": trace_query_proofs,
     })
+}
+
+// HELPER FUNCTIONS
+// ===========================================================================
+
+fn fold_positions(
+    positions: &[usize],
+    source_domain_size: usize,
+    folding_factor: usize,
+) -> Vec<usize> {
+    let target_domain_size = source_domain_size / folding_factor;
+
+    let mut result = Vec::new();
+    for position in positions {
+        let position = position % target_domain_size;
+        // make sure we don't record duplicated values
+        if !result.contains(&position) {
+            result.push(position);
+        }
+    }
+
+    result
 }
