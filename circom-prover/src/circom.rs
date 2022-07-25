@@ -9,7 +9,7 @@ use rug::{ops::Pow, Float};
 use winterfell::{
     crypto::hashers::Poseidon,
     math::{fields::f256::BaseElement, log2, StarkField},
-    Prover, Air, HashFunction
+    Air, HashFunction, Prover,
 };
 
 use crate::{json::proof_to_json, WinterPublicInputs};
@@ -241,43 +241,65 @@ where
 
     let mut file = File::create(format!("target/circom/{}/verifier.circom", circuit_name))?;
 
-    file.write("pragma circom 2.0.0;\n\n".as_bytes())?;
-    file.write("include \"../../../circuits/verify.circom\";\n".as_bytes())?;
-    file.write(
-        format!(
-            "include \"../../../circuits/air/{}.circom\";\n\n",
-            circuit_name
-        )
-        .as_bytes(),
-    )?;
-    file.write(
-        "component main {public [ood_frame_constraint_evaluation, ood_trace_frame]}= Verify(\n"
-            .as_bytes(),
-    )?;
-    file.write(
-        format!(
-            "    {}, // addicity\n    {}, // ce_blowup_factor\n    {}, // domain_offset\n    {}, // folding_factor\n    {}, // fri_num_queries\n    {}, // fri_tree_depth\n    {}, // grinding_factor\n    {}, // lde_blowup_factor\n    {}, // num_assertions\n    {}, // num_draws\n    {}, // num_fri_layers\n    {}, // num_pub_coin_seed\n    {}, // num_public_inputs\n    {}, // num_queries\n    {}, // num_transition_constraints\n    {}, // trace_length\n    {},  // trace_length\n    {} // tree_depth\n);\n",
-            E::TWO_ADICITY,
-            air.ce_blowup_factor(),
-            air.domain_offset(),
-            air.options().to_fri_options().folding_factor(),
-            fri_num_queries,
-            fri_tree_depths,
-            air.options().grinding_factor(),
-            air.options().blowup_factor(),
-            air.context().num_assertions(),
-            number_of_draws(air.options().num_queries() as u128, air.lde_domain_size() as u128,128),
-            air.options().to_fri_options().num_fri_layers(air.lde_domain_size()),
-            pub_coin_seed_len,
-            AIR::PublicInputs::NUM_PUB_INPUTS,
-            air.options().num_queries(),
-            air.context().num_transition_constraints(),
-            air.trace_length(),
-            air.trace_info().width(),
-            log2(air.lde_domain_size()),
-        )
-        .as_bytes(),
-    )?;
+    let arguments = format!(
+        "{}, // addicity\n    \
+            {}, // ce_blowup_factor\n    \
+            {}, // domain_offset\n    \
+            {}, // folding_factor\n    \
+            {}, // fri_num_queries\n    \
+            {}, // fri_tree_depth\n    \
+            {}, // grinding_factor\n    \
+            {}, // lde_blowup_factor\n    \
+            {}, // num_assertions\n    \
+            {}, // num_draws\n    \
+            {}, // num_fri_layers\n    \
+            {}, // num_pub_coin_seed\n    \
+            {}, // num_public_inputs\n    \
+            {}, // num_queries\n    \
+            {}, // num_transition_constraints\n    \
+            {}, // trace_length\n    \
+            {},  // trace_length\n    \
+            {} // tree_depth",
+        E::TWO_ADICITY,
+        air.ce_blowup_factor(),
+        air.domain_offset(),
+        air.options().to_fri_options().folding_factor(),
+        fri_num_queries,
+        fri_tree_depths,
+        air.options().grinding_factor(),
+        air.options().blowup_factor(),
+        air.context().num_assertions(),
+        number_of_draws(
+            air.options().num_queries() as u128,
+            air.lde_domain_size() as u128,
+            128
+        ),
+        air.options()
+            .to_fri_options()
+            .num_fri_layers(air.lde_domain_size()),
+        pub_coin_seed_len,
+        AIR::PublicInputs::NUM_PUB_INPUTS,
+        air.options().num_queries(),
+        air.context().num_transition_constraints(),
+        air.trace_length(),
+        air.trace_info().width(),
+        log2(air.lde_domain_size()),
+    );
+
+    let file_contents = format!(
+        "pragma circom 2.0.0;
+
+include \"../../../circuits/verify.circom\";
+include \"../../../circuits/air/{}.circom\";
+
+component main {{public [ood_frame_constraint_evaluation, ood_trace_frame]}} = Verify(
+    {}
+);
+",
+        circuit_name, arguments
+    );
+
+    file.write(file_contents.as_bytes())?;
 
     Ok(())
 }
