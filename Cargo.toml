@@ -9,7 +9,8 @@ members = [
   "winterfell/prover",
   "winterfell/verifier",
   "winterfell/winterfell",
-  "circom-prover"
+  "circom-prover",
+  "examples/sum"
 ]
 
 

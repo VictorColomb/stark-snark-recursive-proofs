@@ -1,5 +1,5 @@
 use winter_circom_prover::circom_prove;
-use winterfell::{
+use winter_circom_prover::winterfell::{
     math::{fields::f256::BaseElement, FieldElement},
     FieldExtension, HashFunction, ProofOptions,
 };

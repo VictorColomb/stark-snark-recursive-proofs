@@ -1,0 +1,23 @@
+[package]
+name = "example-sum"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.60"
+default-run = "prove"
+
+[features]
+std = ["serde/std", "winter-circom-prover/std"]
+default = ["std"]
+concurrent = ["std", "winter-circom-prover/concurrent"]
+
+[dependencies]
+winter-circom-prover = { version = "0.1.0", default-features = false, path = "../../circom-prover" }
+serde = { version = "1.0", default-features = false }
+
+[[bin]]
+name = "prove"
+path = "src/prove.rs"
+
+[[bin]]
+name = "verify"
+path = "src/verify.rs"

@@ -1,6 +1,6 @@
 use serde::{ser::SerializeTuple, Serialize};
 use winter_circom_prover::WinterPublicInputs;
-use winterfell::{
+use winter_circom_prover::winterfell::{
     math::{fields::f256::BaseElement, FieldElement},
     Air, AirContext, Assertion, ByteWriter, EvaluationFrame, FieldExtension, HashFunction,
     ProofOptions, TraceInfo, TransitionConstraintDegree, Serializable

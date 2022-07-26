@@ -14,11 +14,3 @@ rug = "1.16"
 winterfell = { version = "0.4.0", default-features = false, path = "../winterfell/winterfell" }
 serde = { version = "1.0", default-features = false }
 serde_json = { version = "1.0", default-features = false }
-
-[[bin]]
-name = "sum_prove"
-path = "src/sum/prove.rs"
-
-[[bin]]
-name = "sum_verify"
-path = "src/sum/verify.rs"

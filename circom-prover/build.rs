@@ -17,8 +17,6 @@ pub fn main() {
             .unwrap();
     }
 
-    println!("{:?}", std::str::from_utf8(&Command::new("pwd").output().unwrap().stdout).unwrap());
-
     // build circom
     Command::new(cargo)
         .arg("build")

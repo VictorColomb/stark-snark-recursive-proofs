@@ -1,5 +1,5 @@
 use super::air::{PublicInputs, WorkAir};
-use winterfell::{
+use winter_circom_prover::winterfell::{
     math::{fields::f256::BaseElement, FieldElement},
     Prover, Trace, TraceTable, ProofOptions
 };
