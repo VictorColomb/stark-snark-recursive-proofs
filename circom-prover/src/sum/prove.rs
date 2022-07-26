@@ -12,7 +12,7 @@ use prover::WorkProver;
 fn main() {
     // computation parameters
     let start = BaseElement::ONE;
-    let trace_length = 128;
+    let trace_length = 256;
 
     // Define proof options; these will be enough for ~96-bit security level.
     let options = ProofOptions::new(

@@ -148,6 +148,106 @@ template Bits2Num(n) {
 
 
 /**
+ * Add to a given array element, using a signal as index.
+ */
+template SelectorAdd(input_len) {
+    signal input in[input_len];
+    signal input index;
+    signal input to_add;
+    signal output out[input_len];
+
+    component eq[input_len];
+
+    for (var i = 0; i < input_len; i++) {
+        eq[i] = IsEqual();
+        eq[i].in[0] <== index;
+        eq[i].in[1] <== i;
+
+        out[i] <== in[i] + to_add * eq[i].out;
+    }
+}
+
+
+/**
+ * Remove duplicates from an array, unknowingly of the output size.
+ *
+ * ARGUMENTS: input_len
+ *
+ * INPUTS:
+ * - in[input_len]
+ * - in_mask[input_len]: binary array, dictating which elements from the input to
+ *                    consider (0 = discard element, as if it were a duplicate)
+ *
+ * OUTPUTS:
+ * - amount: number of distinct elements found in the input array
+ * - out[input_len]: array containing the distinct elements from the inputs
+ *                   and zeroes as padding; order is preserved
+ */
+template RemoveDuplicatesUnknown(input_len) {
+    signal input in[input_len];
+    signal input in_mask[input_len];
+    signal output out[input_len];
+    signal output out_mask[input_len];
+
+    signal dup[input_len - 1][input_len - 1];
+    signal k[input_len];
+
+    component add[input_len - 1];
+    component duplicate[input_len - 1];
+    component lt[input_len - 1];
+
+    // find duplicates
+    // duplicate[i].out = (in[i+1] is a duplicate) ? 1 : 0
+    for (var i = 0; i < input_len - 1; i++) {
+        dup[i][0] <== in[i + 1] - in[0];
+        for (var j = 1; j <= i; j++) {
+            dup[i][j] <== dup[i][j - 1] * (in[i + 1] - in[j]);
+        }
+
+        duplicate[i] = IsZero();
+        duplicate[i].in <== dup[i][i] * in_mask[i];
+    }
+
+    // first element is never a duplicate
+    k[0] <== 0;
+    add[0] = SelectorAdd(input_len);
+    add[0].in[0] <== in[0];
+    for (var i = 1; i < input_len; i++) {
+        add[0].in[i] <== 0;
+    }
+
+    // compute non-duplicates count and list
+    for (var i = 1; i < input_len; i++) {
+        k[i] <== k[i - 1] + (1 - duplicate[i - 1].out);
+
+        add[i - 1].index <== k[i];
+        add[i - 1].to_add <== in[i] * (1 - duplicate[i - 1].out);
+
+        if (i == input_len - 1) {
+            for (var j = 0; j < input_len; j++) {
+                out[j] <== add[i - 1].out[j];
+            }
+        } else {
+            add[i] = SelectorAdd(input_len);
+            for (var j = 0; j < input_len; j++) {
+                add[i].in[j] <== add[i - 1].out[j];
+            }
+        }
+    }
+
+    out_mask[0] <== 1;
+    var log2_input_len = numbits(input_len) + 1;
+    for (var i = 0; i < input_len - 1; i++) {
+        lt[i] = LessThan(log2_input_len);
+        lt[i].in[0] <== i + 1;
+        lt[i].in[1] <== k[input_len - 1] + 1;
+
+        out_mask[i + 1] <== lt[i].out;
+    }
+}
+
+
+/**
  * Remove duplicates from a list with specified number of inputs.
  * This component takes the first output_len distinct elements of its input
  * but only proves that its output comes from the input. It DOES NOT PROVE
@@ -155,7 +255,6 @@ template Bits2Num(n) {
  * If there are not enough distinct elements in the input to fill the output,
  * the program will crash.
  * For example if used with output_len > input_len, the program will panic.
- *
  *
  * ARGUMENTS:
  * - input_len: the length of the input list;
@@ -221,10 +320,10 @@ template IsZero() {
 
     signal inv;
 
-    inv <-- in!=0 ? 1/in : 0;
+    inv <-- in != 0 ? 1/in : 0;
 
-    out <== -in*inv +1;
-    in*out === 0;
+    out <== - in*inv + 1;
+    in * out === 0;
 }
 
 template IsEqual() {
@@ -288,16 +387,19 @@ template Switcher() {
  *
  * INPUTS:
  * - in[input_len]: array to look into
+ * - mask[input_len]: binary array that defines which values to consider 0 =
+                discard element, as if it were not in the array to begin with
  * - lookup[num_lookup]: elements whose indexes we are looking for
  *
  * OUTPUTS: out[num_lookup]
- *
- * TODO: make the template work if an element appears multiple times
  */
 template MultiIndexLookup(input_len, num_lookup) {
     signal input in[input_len];
+    signal input mask[input_len];
     signal input lookup[num_lookup];
     signal output out[num_lookup];
+
+    signal temp[num_lookup][input_len];
 
     component eq[num_lookup][input_len];
 
@@ -309,7 +411,8 @@ template MultiIndexLookup(input_len, num_lookup) {
             eq[i][j].in[0] <== lookup[i];
             eq[i][j].in[1] <== in[j];
 
-            index += j * eq[i][j].out;
+            temp[i][j] <== mask[j] * eq[i][j].out;
+            index += temp[i][j] * j;
         }
 
         out[i] <== index;

@@ -79,13 +79,11 @@ where
     );
 
     // convert proof to json object
-    let mut fri_num_queries = Vec::new();
     let mut fri_tree_depths = Vec::new();
     let json = proof_to_json::<P::Air, Poseidon<BaseElement>>(
         proof,
         &air,
         pub_inputs.clone(),
-        &mut fri_num_queries,
         &mut fri_tree_depths,
     );
 
@@ -101,7 +99,6 @@ where
     generate_circom_main::<P::BaseField, P::Air>(
         circuit_name,
         &air,
-        &fri_num_queries,
         &fri_tree_depths,
         json["pub_coin_seed"].as_array().unwrap().len(),
     )
@@ -213,7 +210,6 @@ where
 pub fn generate_circom_main<E, AIR>(
     circuit_name: &str,
     air: &AIR,
-    fri_num_queries: &Vec<usize>,
     fri_tree_depths: &Vec<usize>,
     pub_coin_seed_len: usize,
 ) -> Result<(), Error>
@@ -222,14 +218,6 @@ where
     AIR: Air,
     AIR::PublicInputs: WinterPublicInputs,
 {
-    let fri_num_queries = format!(
-        "[{}]",
-        fri_num_queries
-            .iter()
-            .map(|x| format!("{}", x))
-            .collect::<Vec<_>>()
-            .join(", ")
-    );
     let fri_tree_depths = format!(
         "[{}]",
         fri_tree_depths
@@ -246,7 +234,6 @@ where
             {}, // ce_blowup_factor\n    \
             {}, // domain_offset\n    \
             {}, // folding_factor\n    \
-            {}, // fri_num_queries\n    \
             {}, // fri_tree_depth\n    \
             {}, // grinding_factor\n    \
             {}, // lde_blowup_factor\n    \
@@ -264,7 +251,6 @@ where
         air.ce_blowup_factor(),
         air.domain_offset(),
         air.options().to_fri_options().folding_factor(),
-        fri_num_queries,
         fri_tree_depths,
         air.options().grinding_factor(),
         air.options().blowup_factor(),

@@ -13,11 +13,11 @@ include "utils.circom";
  * - opening[depth + 1]: the authentication path to verify. the first element being the leaf
  * - root: the expected root of the tree
  */
-template MerkleOpeningVerify(depth, leaf_size) {
+template MerkleOpeningRoot(depth, leaf_size) {
     signal input index;
     signal input leaf[leaf_size];
     signal input opening[depth];
-    signal input root;
+    signal output root;
 
     component index_bits = Num2Bits(depth);
     component node_index_bits = Num2Bits(depth + 1);
@@ -60,8 +60,9 @@ template MerkleOpeningVerify(depth, leaf_size) {
         P[i].in[1] <== switch[i].outR;
     }
 
-    P[depth - 1].out === root;
+    root <== P[depth - 1].out;
 }
+
 
 /**
  * Verify the validity of a number of Merkle openings, against a given root.
@@ -81,17 +82,43 @@ template MerkleOpeningsVerify(amount, depth, leaf_size) {
     component V[amount];
 
     for (var i = 0; i < amount; i++) {
-        V[i] = MerkleOpeningVerify(depth, leaf_size);
+        V[i] = MerkleOpeningRoot(depth, leaf_size);
         V[i].index <== indexes[i];
-        V[i].root <== root;
         for (var j = 0; j < leaf_size; j++) {
             V[i].leaf[j] <== leaves[i][j];
         }
         for (var j = 0; j < depth; j++) {
             V[i].opening[j] <== openings[i][j];
         }
+
+        V[i].root === root;
     }
 }
+
+
+template MerkleOpeningsVerifyMasked(amount, depth, leaf_size) {
+    signal input indexes[amount];
+    signal input leaves[amount][leaf_size];
+    signal input mask[amount];
+    signal input openings[amount][depth];
+    signal input root;
+
+    component V[amount];
+
+    for (var i = 0; i < amount; i++) {
+        V[i] = MerkleOpeningRoot(depth, leaf_size);
+        V[i].index <== indexes[i];
+        for (var j = 0; j < leaf_size; j++) {
+            V[i].leaf[j] <== leaves[i][j];
+        }
+        for (var j = 0; j < depth; j++) {
+            V[i].opening[j] <== openings[i][j];
+        }
+
+        (V[i].root - root) * mask[i] === 0;
+    }
+}
+
 
 /**
  * Compute the layer of a Poseidon-based Merkle tree.
@@ -117,6 +144,7 @@ template MerkleTreeLayer(N) {
         parents[i] <== hash[i].out;
     }
 }
+
 
 /**
  * Compute a Merkle tree root.
@@ -154,10 +182,6 @@ template MerkleTree(N) {
         }
         size \= 2;
     }
-
-    // check that we have reached the root
-    // TODO: remove check (if the code is correct the check is useless)
-    assert(size == 1);
 
     root <== layer[depth - 1].parents[0];
 }

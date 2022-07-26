@@ -50,7 +50,6 @@ pub fn proof_to_json<AIR, H>(
     proof: StarkProof,
     air: &AIR,
     pub_inputs: AIR::PublicInputs,
-    fri_num_queries: &mut Vec<usize>,
     fri_tree_depths: &mut Vec<usize>,
 ) -> Value
 where
@@ -208,7 +207,6 @@ where
     let fri_layer_proofs = fri_layer_proofs
         .iter_mut()
         .map(|paths| {
-            fri_num_queries.push(paths.len());
             fri_tree_depths.push(paths[0].len());
 
             for path in paths.iter_mut() {

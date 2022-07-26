@@ -8,7 +8,6 @@ template FriVerifier(
     addicity,
     domain_offset,
     folding_factor,
-    fri_num_queries,
     fri_tree_depths,
     lde_blowup_factor,
     num_fri_layers,
@@ -91,29 +90,34 @@ template FriVerifier(
         var target_domain_size = domain_size \ folding_factor;
         if (depth == 0) {
             // for the first FRI layers, fold query_positions
-            folded_positions[0] = RemoveDuplicates(num_queries, fri_num_queries[0]);
+            folded_positions[0] = RemoveDuplicatesUnknown(num_queries);
 
             for (var j = 0; j < num_queries; j++) {
                 folded_position_modulos[0][j] = IntegerDivision(target_domain_size, tree_depth);
                 folded_position_modulos[0][j].in <== query_positions[j];
-                folded_positions[depth].in[j] <== folded_position_modulos[depth][j].remainder;
+
+                folded_positions[0].in[j] <== folded_position_modulos[0][j].remainder;
+                folded_positions[0].in_mask[j] <== 1;
             }
         } else {
             // for all consequent FRI layers, fold previous folded_positions
-            folded_positions[depth] = RemoveDuplicates(fri_num_queries[depth - 1], fri_num_queries[depth]);
+            folded_positions[depth] = RemoveDuplicatesUnknown(num_queries);
 
-            for (var j = 0; j < fri_num_queries[depth - 1]; j++) {
+            for (var j = 0; j < num_queries; j++) {
                 folded_position_modulos[depth][j] = IntegerDivision(target_domain_size, tree_depth);
                 folded_position_modulos[depth][j].in <== folded_positions[depth - 1].out[j];
+
                 folded_positions[depth].in[j] <== folded_position_modulos[depth][j].remainder;
+                folded_positions[depth].in_mask[j] <== folded_positions[depth - 1].out_mask[j];
             }
         }
 
         // VERIFY FRI LAYER COMMITMENT
-        layer_commitment_verifiers[depth] = MerkleOpeningsVerify(fri_num_queries[depth], fri_tree_depths[depth], folding_factor);
+        layer_commitment_verifiers[depth] = MerkleOpeningsVerifyMasked(num_queries, fri_tree_depths[depth], folding_factor);
         layer_commitment_verifiers[depth].root <== fri_commitments[depth];
-        for (var i = 0; i < fri_num_queries[depth]; i++) {
+        for (var i = 0; i < num_queries; i++) {
             layer_commitment_verifiers[depth].indexes[i] <== folded_positions[depth].out[i];
+            layer_commitment_verifiers[depth].mask[i] <== folded_positions[depth].out_mask[i];
             for (var j = 0; j < folding_factor; j++) {
                 layer_commitment_verifiers[depth].leaves[i][j] <== fri_layer_queries[depth][i * folding_factor + j];
             }
@@ -126,15 +130,17 @@ template FriVerifier(
         var row_length = domain_size \ folding_factor;
         if (depth == 0) {
             // handle the first FRI layer with query_values
-            layer_query_selectors[0] = MultiSelector(fri_num_queries[0] * folding_factor, num_queries);
-            for (var i = 0; i < fri_num_queries[0] * folding_factor; i++) {
+            layer_queries_lookups[0] = MultiIndexLookup(num_queries, num_queries);
+            for (var j = 0; j < num_queries; j++) {
+                layer_queries_lookups[0].in[j] <== folded_positions[0].out[j];
+                layer_queries_lookups[0].mask[j] <== folded_positions[0].out_mask[j];
+            }
+
+            layer_query_selectors[0] = MultiSelector(num_queries * folding_factor, num_queries);
+            for (var i = 0; i < num_queries * folding_factor; i++) {
                 layer_query_selectors[0].in[i] <== fri_layer_queries[0][i];
             }
 
-            layer_queries_lookups[0] = MultiIndexLookup(fri_num_queries[0], num_queries);
-            for (var j = 0; j < fri_num_queries[0]; j++) {
-                layer_queries_lookups[0].in[j] <== folded_positions[0].out[j];
-            }
             for (var i = 0; i < num_queries; i++) {
                 // integer division of position (query_positions[i]) by row_length
                 layer_queries_divisions[0][i] = IntegerDivision(row_length, tree_depth);
@@ -155,16 +161,18 @@ template FriVerifier(
             }
         } else {
             // handle subsequent layers
-            layer_query_selectors[depth] = MultiSelector(fri_num_queries[depth] * folding_factor, fri_num_queries[depth - 1]);
-            for (var i = 0; i < fri_num_queries[depth] * folding_factor; i++) {
+            layer_queries_lookups[depth] = MultiIndexLookup(num_queries, num_queries);
+            for (var j = 0; j < num_queries; j++) {
+                layer_queries_lookups[depth].in[j] <== folded_positions[depth].out[j];
+                layer_queries_lookups[depth].mask[j] <== folded_positions[depth].out_mask[j];
+            }
+
+            layer_query_selectors[depth] = MultiSelector(num_queries * folding_factor, num_queries);
+            for (var i = 0; i < num_queries * folding_factor; i++) {
                 layer_query_selectors[depth].in[i] <== fri_layer_queries[depth][i];
             }
 
-            layer_queries_lookups[depth] = MultiIndexLookup(fri_num_queries[depth], fri_num_queries[depth - 1]);
-            for (var j = 0; j < fri_num_queries[depth]; j++) {
-                layer_queries_lookups[depth].in[j] <== folded_positions[depth].out[j];
-            }
-            for (var i = 0; i < fri_num_queries[depth - 1]; i++) {
+            for (var i = 0; i < num_queries; i++) {
                 // integer division of position (folded_positions[depth - 1].out[i]) by row_length
                 layer_queries_divisions[depth][i] = IntegerDivision(row_length, fri_tree_depths[depth - 1]);
                 layer_queries_divisions[depth][i].in <== folded_positions[depth - 1].out[i];
@@ -172,27 +180,30 @@ template FriVerifier(
                 // find index of position % row_length in folded_positions[depth]
                 layer_queries_lookups[depth].lookup[i] <== layer_queries_divisions[depth][i].remainder;
             }
-            for (var i = 0; i < fri_num_queries[depth - 1]; i++) {
+            for (var i = 0; i < num_queries; i++) {
                 // pick fri_layer_queries[depth][idx * folding_factor + position \ row_length]
                 // (where idx = layer_queries_lookups[depth][i].out)
                 layer_query_selectors[depth].indexes[i] <== layer_queries_lookups[depth].out[i] * folding_factor + layer_queries_divisions[depth][i].quotient;
             }
-            for (var i = 0; i < fri_num_queries[depth - 1]; i++) {
-                layer_query_selectors[depth].out[i] === evaluations[depth - 1][i].out;
+            for (var i = 0; i < num_queries; i++) {
+                // verify that query_values == deep_evaluations
+                // (where query_values = layer_query_selectors[depth].out)
+                // the mask is used to rule out values beyond the actual folded positions
+                (layer_query_selectors[depth].out[i] - evaluations[depth - 1][i].out) * folded_positions[depth - 1].out_mask[i] === 0;
             }
         }
 
         // BUILD A SET OF COORDINATES FOR EACH ROW POLYNOMIAL
         // AND INTERPOLATE INTO ROW POLYNOMIALS
-        coordinate_interpolators[depth] = BatchInterpolate(fri_num_queries[depth], folding_factor);
-        coordinate_pow_selectors[depth] = MultiSelector(lde_domain_size, fri_num_queries[depth]);
+        coordinate_interpolators[depth] = BatchInterpolate(num_queries, folding_factor);
+        coordinate_pow_selectors[depth] = MultiSelector(lde_domain_size, num_queries);
         for (var i = 0; i < lde_domain_size; i++) {
             coordinate_pow_selectors[depth].in[i] <== x_pow[i];
         }
-        for (var i = 0; i < fri_num_queries[depth]; i++) {
+        for (var i = 0; i < num_queries; i++) {
             coordinate_pow_selectors[depth].indexes[i] <== folded_positions[depth].out[i] * domain_generator_offset;
         }
-        for (var i = 0; i < fri_num_queries[depth]; i++) {
+        for (var i = 0; i < num_queries; i++) {
             coordinates_xe[depth][i] <== coordinate_pow_selectors[depth].out[i] * domain_offset;
 
             for (var j = 0; j < folding_factor; j++) {
@@ -201,7 +212,7 @@ template FriVerifier(
             }
         }
 
-        for (var i = 0; i < fri_num_queries[depth]; i++) {
+        for (var i = 0; i < num_queries; i++) {
             evaluations[depth][i] = Evaluate(folding_factor);
             evaluations[depth][i].x <== layer_alphas[depth];
             for (var j = 0; j < folding_factor; j++) {
@@ -222,15 +233,15 @@ template FriVerifier(
     // ==========================================================================
 
     // check remainder values against last level evaluations
-    remainder_selectors = MultiSelector(remainder_size, fri_num_queries[num_fri_layers - 1]);
+    remainder_selectors = MultiSelector(remainder_size, num_queries);
     for (var i = 0; i < remainder_size; i++) {
         remainder_selectors.in[i] <== fri_remainder[i];
     }
-    for (var i = 0; i < fri_num_queries[num_fri_layers - 1]; i++) {
+    for (var i = 0; i < num_queries; i++) {
         remainder_selectors.indexes[i] <== folded_positions[num_fri_layers - 1].out[i];
     }
-    for (var i = 0; i < fri_num_queries[num_fri_layers - 1]; i++) {
-        remainder_selectors.out[i] === evaluations[num_fri_layers - 1][i].out;
+    for (var i = 0; i < num_queries; i++) {
+        (remainder_selectors.out[i] - evaluations[num_fri_layers - 1][i].out) * folded_positions[num_fri_layers - 1].out_mask[i] === 0;
     }
 
     // transpose remainder into a matrix of width folding_factor and hash each line
