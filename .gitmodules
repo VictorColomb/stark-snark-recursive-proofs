@@ -1,3 +1,4 @@
 [submodule "iden3_circom"]
 	path = iden3_circom
 	url = https://github.com/iden3/circom
+	branch = master

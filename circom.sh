@@ -117,7 +117,7 @@ then
 		then
 			VERBOSE_CIRCOM="--verbose"
 		fi
-		circom "verifier.circom" --r1cs --sym --c $VERBOSE_CIRCOM
+		../../../iden3_circom/target/release/circom "verifier.circom" --r1cs --sym --c $VERBOSE_CIRCOM
 		[ ! -f verifier.r1cs ] && exit 1
 		[ ! -d verifier_cpp ] && exit 1
 	fi
