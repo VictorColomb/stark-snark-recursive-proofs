@@ -1,4 +1,8 @@
 [submodule "iden3_circom"]
-	path = iden3_circom
+	path = iden3/circom
 	url = https://github.com/iden3/circom
+	branch = master
+[submodule "iden3/snarkjs"]
+	path = iden3/snarkjs
+	url = https://github.com/iden3/snarkjs
 	branch = master

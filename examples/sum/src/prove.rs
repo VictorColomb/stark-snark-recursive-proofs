@@ -1,4 +1,5 @@
 use winter_circom_prover::circom_prove;
+use winter_circom_prover::utils::{LoggingLevel, WinterCircomError};
 use winter_circom_prover::winterfell::{
     math::{fields::f256::BaseElement, FieldElement},
     FieldExtension, HashFunction, ProofOptions,
@@ -9,10 +10,10 @@ mod air;
 mod prover;
 use prover::WorkProver;
 
-fn main() {
+fn main() -> Result<(), WinterCircomError> {
     // computation parameters
     let start = BaseElement::ONE;
-    let trace_length = 256;
+    let trace_length = 128;
 
     // Define proof options; these will be enough for ~96-bit security level.
     let options = ProofOptions::new(
@@ -29,5 +30,5 @@ fn main() {
     let prover = WorkProver::new(options.clone());
     let trace = prover.build_trace(start, trace_length);
 
-    circom_prove(prover, trace, "sum");
+    circom_prove(prover, trace, "sum", LoggingLevel::Default)
 }

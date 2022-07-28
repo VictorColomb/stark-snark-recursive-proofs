@@ -8,6 +8,8 @@ pub use circom::{circom_prove, circom_verify};
 mod verification;
 pub use verification::check_ood_frame;
 
+pub mod utils;
+
 // re-export winterfell to simplify dependencies
 pub use winterfell;
 

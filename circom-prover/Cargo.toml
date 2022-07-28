@@ -14,3 +14,4 @@ rug = "1.16"
 winterfell = { version = "0.4.0", default-features = false, path = "../winterfell/winterfell" }
 serde = { version = "1.0", default-features = false }
 serde_json = { version = "1.0", default-features = false }
+colored = "2.0"
