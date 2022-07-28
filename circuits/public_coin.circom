@@ -33,9 +33,8 @@ include "utils.circom";
  * - query_positions: positions at wich we will check the openings for both trace states and constraint evaluations.
  * - z: Out Of Domain point of evaluation, generated in the public coin.
  *
- * TODO:
- * - The third value isnt used as long  as we do not have auxiliary trace segments.
-     We could remove the hash and just increment our coin counter by one.
+ * TODO: The third value isnt used as long as we do not have auxiliary trace segments.
+  *      We could remove the hash and just increment our coin counter by one.
  */
 template PublicCoin(
     ce_blowup_factor,

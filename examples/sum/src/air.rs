@@ -1,10 +1,13 @@
 use serde::{ser::SerializeTuple, Serialize};
-use winter_circom_prover::WinterPublicInputs;
-use winter_circom_prover::winterfell::{
+use winter_circom_prover::{winterfell::{
     math::{fields::f256::BaseElement, FieldElement},
     Air, AirContext, Assertion, ByteWriter, EvaluationFrame, FieldExtension, HashFunction,
-    ProofOptions, TraceInfo, TransitionConstraintDegree, Serializable
-};
+    ProofOptions, Serializable, TraceInfo,
+}, WinterCircomProofOptions};
+use winter_circom_prover::WinterPublicInputs;
+
+pub(crate) const PROOF_OPTIONS: WinterCircomProofOptions<2> =
+    WinterCircomProofOptions::new(128, 2, 3, [1, 1], 32, 8, 0, 8, 128);
 
 #[derive(Clone, Default)]
 pub struct PublicInputs {
@@ -46,12 +49,9 @@ impl Air for WorkAir {
     type PublicInputs = PublicInputs;
 
     fn new(trace_info: TraceInfo, pub_inputs: PublicInputs, options: ProofOptions) -> Self {
-        let degrees = vec![
-            TransitionConstraintDegree::new(1),
-            TransitionConstraintDegree::new(1),
-        ];
+        let degrees = PROOF_OPTIONS.transition_constraint_degrees();
 
-        let num_assertions = 3;
+        let num_assertions = PROOF_OPTIONS.num_assertions();
 
         WorkAir {
             context: AirContext::new(trace_info, degrees, num_assertions, options),

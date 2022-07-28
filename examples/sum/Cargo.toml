@@ -15,8 +15,12 @@ winter-circom-prover = { version = "0.1.0", default-features = false, path = "..
 serde = { version = "1.0", default-features = false }
 
 [[bin]]
+name = "compile"
+path = "src/compile.rs"
+
+[[bin]]
 name = "prove"
-path = "src/prove.rs"
+path = "src/main.rs"
 
 [[bin]]
 name = "verify"

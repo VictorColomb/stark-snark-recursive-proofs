@@ -1,7 +1,7 @@
-use super::air::{PublicInputs, WorkAir};
+use super::air::{PublicInputs, WorkAir, PROOF_OPTIONS};
 use winter_circom_prover::winterfell::{
     math::{fields::f256::BaseElement, FieldElement},
-    Prover, Trace, TraceTable, ProofOptions
+    ProofOptions, Prover, Trace, TraceTable,
 };
 
 pub struct WorkProver {
@@ -14,7 +14,7 @@ impl WorkProver {
     }
 
     pub fn build_trace(&self, start: BaseElement, n: usize) -> TraceTable<BaseElement> {
-        let trace_width = 2;
+        let trace_width = PROOF_OPTIONS.trace_width;
         let mut trace = TraceTable::new(trace_width, n);
 
         trace.fill(

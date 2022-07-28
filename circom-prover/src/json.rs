@@ -44,8 +44,7 @@ use winterfell::{
 /// }
 /// ```
 ///
-/// ## TODO:
-/// - return errors instead of panicking (`.map_err()` and `?` instead of `.unwrap()`)
+/// TODO: Return errors instead of panicking (`.map_err()` and `?` instead of `.unwrap()`)
 pub fn proof_to_json<AIR, H>(
     proof: StarkProof,
     air: &AIR,

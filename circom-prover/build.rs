@@ -8,7 +8,7 @@ pub fn main() {
     let cargo = env::var("CARGO").unwrap();
 
     // initialize and update git submodules
-    if !Path::new("iden3/circom/.git").exists() && Path::new("iden3/snarkjs/.git").exists() {
+    if !(Path::new("iden3/circom/.git").exists() && Path::new("iden3/snarkjs/.git").exists()) {
         assert!(
             Command::new("git")
                 .arg("submodule")

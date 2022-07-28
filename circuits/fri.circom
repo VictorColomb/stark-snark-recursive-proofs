@@ -232,8 +232,6 @@ template FriVerifier(
     // 2 - VERIFY THE REMAINDER OF THE FRI PROOF
     // ==========================================================================
 
-    // FIXME: make the remainder check work for num_fri_layers = 0
-
     // check remainder values against last level evaluations
     remainder_selectors = MultiSelector(remainder_size, num_queries);
     for (var i = 0; i < remainder_size; i++) {
