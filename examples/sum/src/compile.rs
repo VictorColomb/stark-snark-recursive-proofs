@@ -1,4 +1,4 @@
-#[path ="main.rs"]
+#[path ="prove.rs"]
 #[allow(dead_code)]
 mod prove;
 

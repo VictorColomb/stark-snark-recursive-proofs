@@ -81,7 +81,6 @@ template AIRAssertions(
     /* ------------------------------------- */
 
     // boundary constraints evaluation
-    component pow[num_assertions];
     component sel[num_assertions];
     for (var i = 0; i < num_assertions; i++) {
         sel[i] = Selector(trace_width);

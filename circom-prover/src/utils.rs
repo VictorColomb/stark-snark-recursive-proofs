@@ -11,20 +11,34 @@ use winterfell::{ProverError, VerifierError};
 // ERRORS
 // ===========================================================================
 
+/// Enumeration of the possible error types for this crate.
 pub enum WinterCircomError {
+    /// This error type is triggered when a function of this crate resulted
+    /// in a [std::io::Error].
     IoError {
         io_error: io::Error,
         comment: Option<String>,
     },
+
+    /// This error is triggered after a function of this crate failed to
+    /// generate a file it further needs.
     FileNotFound {
         file: String,
         comment: Option<String>,
     },
+
+    /// This error type is triggered when an underlying command called by a
+    /// function of this crate failed (returned a non-zero exit code).
     ExitCodeError {
         executable: String,
         code: i32,
     },
+
+    /// This error is triggered, when the generated Winterfell proof could not
+    /// be verified. This only happens in debug mode.
     InvalidProof(Option<VerifierError>),
+
+    /// This error is triggered when the Winterfell proof generation failed.
     ProverError(ProverError),
 }
 
@@ -108,7 +122,7 @@ impl Executable {
     }
 }
 
-pub fn canonicalize<P: AsRef<Path>>(path: P) -> Result<PathBuf, WinterCircomError> {
+pub(crate) fn canonicalize<P: AsRef<Path>>(path: P) -> Result<PathBuf, WinterCircomError> {
     let path = path.as_ref();
     std::fs::canonicalize(path).map_err(|io_error| WinterCircomError::IoError {
         io_error,
@@ -211,13 +225,7 @@ pub(crate) fn delete_directory(path: String) {
 // LOGGING
 // ===========================================================================
 
-/// Logging level.
-///
-/// - [Quiet](LoggingLevel::Quiet): nothing is printed to stdout (errors are still printed to stderr)
-/// - [Default](LoggingLevel::Default): minimal logging (only major steps are logged to stdout)
-/// - [Verbose](LoggingLevel::Verbose): output of underlying executables is printed as well
-/// - [VeryVerbose](LoggingLevel::VeryVerbose): underlying executables are set to verbose mode, and their
-/// output is printed as well
+/// Logging level selector for functions of this crate.
 pub enum LoggingLevel {
     /// Nothing is printed to stdout (errors are still printed to stderr)
     Quiet,
@@ -233,14 +241,24 @@ pub enum LoggingLevel {
 }
 
 impl LoggingLevel {
-    pub fn print_big_steps(&self) -> bool {
+    /// Returns whether the logging level is set to [Default](LoggingLevel::Default)
+    /// or above.
+    ///
+    /// This is used to trigger the printing of big step announcements in the functions
+    /// of this crate.
+    pub(crate) fn print_big_steps(&self) -> bool {
         match self {
             Self::Quiet => false,
             _ => true,
         }
     }
 
-    pub fn print_command_output(&self) -> bool {
+    /// Returns whether the logging level is set to [Verbose](LoggingLevel::Verbose)
+    /// or above.
+    ///
+    /// This is used to trigger the printing of underlying commands stdout in the
+    /// functions of this crate.
+    pub(crate) fn print_command_output(&self) -> bool {
         match self {
             Self::Quiet => false,
             Self::Default => false,
@@ -248,7 +266,12 @@ impl LoggingLevel {
         }
     }
 
-    pub fn verbose_commands(&self) -> bool {
+    /// Returns whether the logging level is set to
+    /// [VeryVerbose](LoggingLevel::VeryVerbose).
+    ///
+    /// This is used to trigger verbose mode of the underlying commands of the
+    /// functions in this crate.
+    pub(crate) fn verbose_commands(&self) -> bool {
         match self {
             Self::VeryVerbose => true,
             _ => false,

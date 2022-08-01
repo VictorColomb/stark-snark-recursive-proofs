@@ -8,19 +8,19 @@ use winterfell::{
     Air, EvaluationFrame,
 };
 
-/// Check that the OOD trace frame corresponds to the given Air and the OOD
-/// constraint evaluations.
+/// Check that the out-of-domain (OOD) trace frame corresponds to the given [Air]
+/// and the OOD constraint evaluations.
 ///
-/// The OOD trace frame is garanteed correct by the Circom SNARK proof. Indeed,
+/// The OOD trace frame is guaranteed correct by the Circom Groth16 proof. Indeed,
 /// should it have been modified, the pseudo-randomly generated query positions
 /// would be different and the Merkle commitment verifications would fail. This
-/// function therefore garanties that the OOD constraint evaluations are
-/// correct.
+/// function therefore guarantees that the OOD constraint evaluations are correct.
 ///
-/// Requires the `public.json` file in the `target/circom/<circuit_name>/`
-/// directory to contain `t` ood constraint evaluations and 2`t` ood trace frame
-/// elements, in that order, where `t` is the trace width. This should be correct if the Circom proof was
-/// generated with the [circom_prove](crate::circom_prove) function.
+/// This function requires the `public.json` file in the
+/// `target/circom/<circuit_name>/` directory to contain `t` ood constraint
+/// evaluations and 2`t` ood trace frame elements, in that order, where `t` is
+/// the trace width. This should be correct if the Circom proof was generated
+/// with the [circom_prove](crate::circom_prove) function.
 pub fn check_ood_frame<AIR>(circuit_name: &str)
 where
     AIR: Air<BaseField = BaseElement> + Default,

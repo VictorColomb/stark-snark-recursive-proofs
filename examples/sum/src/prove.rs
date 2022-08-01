@@ -1,6 +1,8 @@
-use winter_circom_prover::circom_prove;
-use winter_circom_prover::utils::{LoggingLevel, WinterCircomError};
-use winter_circom_prover::winterfell::math::{fields::f256::BaseElement, FieldElement};
+use winter_circom_prover::{
+    circom_prove,
+    utils::{LoggingLevel, WinterCircomError},
+    winterfell::math::{fields::f256::BaseElement, FieldElement},
+};
 
 mod air;
 pub(crate) use air::PROOF_OPTIONS;

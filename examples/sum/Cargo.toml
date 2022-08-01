@@ -20,7 +20,7 @@ path = "src/compile.rs"
 
 [[bin]]
 name = "prove"
-path = "src/main.rs"
+path = "src/prove.rs"
 
 [[bin]]
 name = "verify"

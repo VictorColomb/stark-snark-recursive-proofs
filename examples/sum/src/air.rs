@@ -90,7 +90,7 @@ impl Air for WorkAir {
 impl Default for WorkAir {
     fn default() -> Self {
         WorkAir::new(
-            TraceInfo::new(1, 8),
+            TraceInfo::new(0, 0),
             PublicInputs::default(),
             ProofOptions::new(
                 32,
@@ -99,7 +99,7 @@ impl Default for WorkAir {
                 HashFunction::Poseidon,
                 FieldExtension::None,
                 8,
-                256,
+                128,
             ),
         )
     }
