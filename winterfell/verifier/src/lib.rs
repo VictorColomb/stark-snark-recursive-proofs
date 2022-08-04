@@ -144,7 +144,6 @@ pub fn verify<AIR: Air>(
                     let channel = VerifierChannel::new(&air, proof)?;
                     perform_verification::<AIR, QuadExtension<AIR::BaseField>, Sha3_256<AIR::BaseField>>(air, channel, public_coin)
                 }
-                //FIXME: <...>
                 HashFunction::Poseidon => {
                     let public_coin = RandomCoin::new(&public_coin_seed);
                     let channel = VerifierChannel::new(&air, proof)?;

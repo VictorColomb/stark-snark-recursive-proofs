@@ -268,67 +268,102 @@
 //!
 //! For all `i` between 0 and `num_assertions`, define `value[i]`, `step[i]` and `register[i]` such as the assertion is `register[i]` at `step[i]` equals `value[i]` (a register is a column of the trace).
 //!
-//! ```circom
+//! ```c++
 //! pragma circom 2.0.0;
 //!
-//! include "../utils.circom";
+//! include "../utils/comparators.circom";
 //!
-//! template AIRTransitions(trace_width) {
-//!     signal output transition_degree[trace_width];
+//! template AIRTransitions(num_transition_constraints) {
+//!     signal output transition_degree[num_transition_constraints];
 //!
+//!     /* === EDIT FROM HERE === */
+//!
+//!     // Hardcode transition degrees, as you did in your implementation
+//!     // of WinterCircomProofOptions.
 //!     transition_degree[0] <== 1;
 //!     transition_degree[1] <== 1;
+//!
+//!     /* ====== TO HERE ====== */
 //! }
 //!
-//! template AIRAssertions(
-//!     num_assertions,
-//!     num_public_inputs,
-//!     trace_length,
-//!     trace_width
-//! ) {
-//!     signal input frame[2][trace_width];
-//!     signal input g_trace;
+//!
+//! template AIRAssertions(num_assertions, num_public_inputs, trace_length, trace_width) {
 //!     signal input public_inputs[num_public_inputs];
-//!     signal input z;
+//!     signal input g_trace;
 //!
-//!     signal output out[num_assertions];
-//!     signal output divisor_degree[num_assertions];
+//!     signal output evaluations[num_assertions];
+//!     signal output number_of_steps[num_assertions];
+//!     signal output registers[num_assertions];
+//!     signal output step_offsets[num_assertions];
+//!     signal output strides[num_assertions];
 //!
-//!     signal numerator[num_assertions];
-//!     signal value[num_assertions];
-//!     signal output step[num_assertions];
-//!     signal register[num_assertions];
+//!     component assertions[num_assertions];
 //!
-//!     /* HERE YOUR ASSERTIONS HERE */
+//!     /* === EDIT FROM HERE === */
 //!
-//!     value[0] <== public_inputs[0];
-//!     step[0] <== 0;
-//!     register[0] <== 0;
+//!     // Hardcode the number of assertions (this is a precaution).
 //!
-//!     value[1] <== public_inputs[0];
-//!     step[1] <== 0;
-//!     register[1] <== 1;
+//!     assert(num_assertions == 3);
 //!
-//!     value[2] <== public_inputs[1];
-//!     step[2] <== trace_length - 1;
-//!     register[2] <== 1;
+//!     // Define your assertions here, using the SingleAssertion, PeriodicAssertion
+//!     // and SequenceAssertion templates.
 //!
-//!     /* ------------------------------------- */
+//!     assertions[0] = SingleAssertion();
+//!     assertions[0].column <== 0;
+//!     assertions[0].step <== 0;
+//!     assertions[0].value <== public_inputs[0];
 //!
-//!     // boundary constraints evaluation
-//!     component pow[num_assertions];
-//!     component sel[num_assertions];
+//!     assertions[1] = SingleAssertion();
+//!     assertions[1].column <== 1;
+//!     assertions[1].step <== 0;
+//!     assertions[1].value <== public_inputs[0];
+//!
+//!     assertions[2] = SingleAssertion();
+//!     assertions[2].column <== 1;
+//!     assertions[2].step <== trace_length - 1;
+//!     assertions[2].value <== public_inputs[1];
+//!
+//!     /* ====== TO HERE ====== */
+//!
 //!     for (var i = 0; i < num_assertions; i++) {
-//!         sel[i] = Selector(trace_width);
-//!         for (var j = 0; j < trace_width; j++) {
-//!             sel[i].in[j] <== frame[0][j];
-//!         }
-//!         sel[i].index <== register[i];
-//!
-//!         out[i] <== sel[i].out - value[i];
-//!         divisor_degree[i] <== 1;
+//!         evaluations[i] <== assertions[i].evaluation;
+//!         number_of_steps[i] <== assertions[i].number_of_steps;
+//!         registers[i] <== assertions[i].register;
+//!         step_offsets[i] <== assertions[i].step_offset;
+//!         strides[i] <== assertions[i].stride_out;
 //!     }
 //! }
+//! ```
+//!
+//! There are three types of assertions in Winterfell: single, periodic and
+//! sequence. There is a Circom template for each of these as well, that are
+//! used as follows (replace each instance of `???` to actually define your 
+//! assertions):
+//!
+//! ```c++
+//! assertions[i] = SingleAssertion();
+//! assertions[i].column <== ???;
+//! assertions[i].step <== ???;
+//! assertions[i].value <== ???;
+//!
+//! assertions[j] = PeriodicAssertion(trace_length);
+//! assertions[j].column <== ???;
+//! assertions[j].first_step <== ???;
+//! assertions[j].stride <== ???;
+//! assertions[j].value <== ???;
+//!
+//! // replace value_length with the length of your sequence
+//! assertions[k] = SequenceAssertion(addicity, trace_length, value_length);
+//! assertions[k].column <== ???;
+//! assertions[k].first_step <== ???;
+//! assertions[k].stride <== ???;
+//! for (var l = 0; l < value_length; l++) {
+//!     assertions[k].values[l] <== ???;
+//! }
+//! // do not modify the three following inputs
+//! assertions[k].addicity_root <== addicity_root;
+//! assertions[k].g_trace <== g_trace;
+//! assertions[k].z <== z;
 //! ```
 //!
 //! 6. Define executables for compilation, proving and verifying.

@@ -97,6 +97,18 @@ where
     P: Prover<BaseField = BaseElement>,
     <<P as Prover>::Air as Air>::PublicInputs: WinterPublicInputs,
 {
+    // CHECK FOR FILES
+    // ===========================================================================
+
+    check_file(
+        format!("target/circom/{}/verifier.r1cs", circuit_name),
+        Some("did you run compile?"),
+    )?;
+    check_file(
+        format!("target/circom/{}/verifier.zkey", circuit_name),
+        Some("did you run compile?"),
+    )?;
+
     // BUILD PROOF
     // ===========================================================================
 

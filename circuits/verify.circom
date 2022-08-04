@@ -4,6 +4,9 @@ include "fri.circom";
 include "merkle.circom";
 include "ood_consistency_check.circom";
 include "public_coin.circom";
+include "utils/arrays.circom";
+include "utils/powers.circom";
+
 
 /**
  * A circom verifier for STARKs.
@@ -74,14 +77,14 @@ template Verify(
 
     signal input addicity_root;
     signal input constraint_commitment;
-    signal input constraint_evaluations[num_queries][trace_width];
+    signal input constraint_evaluations[num_queries][ce_blowup_factor];
     signal input constraint_query_proofs[num_queries][tree_depth];
     signal input fri_commitments[num_fri_layers + 1];
     signal input fri_layer_proofs[num_fri_layers][num_queries][tree_depth];
     signal input fri_layer_queries[num_fri_layers][num_queries * folding_factor];
     signal input fri_remainder[remainder_size];
-    signal input ood_constraint_evaluations[trace_width];
-    signal input ood_frame_constraint_evaluation[trace_width];
+    signal input ood_constraint_evaluations[ce_blowup_factor];
+    signal input ood_frame_constraint_evaluation[num_transition_constraints];
     signal input ood_trace_frame[2][trace_width];
     signal input pub_coin_seed[num_pub_coin_seed];
     signal input public_inputs[num_public_inputs];
@@ -90,8 +93,8 @@ template Verify(
     signal input trace_evaluations[num_queries][trace_width];
     signal input trace_query_proofs[num_queries][tree_depth];
 
-    signal constraint_div[num_queries][trace_width];
-    signal constraint_evalxcoeff[num_queries][trace_width];
+    signal constraint_div[num_queries][ce_blowup_factor];
+    signal constraint_evalxcoeff[num_queries][ce_blowup_factor];
     signal deep_composition[num_queries];
     signal deep_deg_adjustment[num_queries];
     signal deep_evaluations[num_queries];
@@ -153,7 +156,7 @@ template Verify(
         pub_coin.fri_commitments[i] <== fri_commitments[i];
     }
 
-    for (var i = 0; i < trace_width; i++) {
+    for (var i = 0; i < ce_blowup_factor; i++) {
         pub_coin.ood_constraint_evaluations[i] <== ood_constraint_evaluations[i];
     }
 
@@ -176,13 +179,16 @@ template Verify(
 
     // Build random coefficients for the composition polynomial constraint coeffiscients
     ood = OodConsistencyCheck(
+        addicity,
         ce_blowup_factor,
         num_assertions,
         num_public_inputs,
+        num_transition_constraints,
         trace_length,
         trace_width
     );
 
+    ood.addicity_root <== addicity_root;
     ood.g_trace <== g_trace;
 
     for (var i = 0; i < num_transition_constraints; i++) {
@@ -209,10 +215,14 @@ template Verify(
     }
     ood.z <== pub_coin.z;
     for (var i = 0; i < trace_width; i++) {
-        ood.channel_ood_evaluations[i] <== ood_constraint_evaluations[i];
-        ood.ood_frame_constraint_evaluation[i] <== ood_frame_constraint_evaluation[i];
         ood.frame[0][i] <== ood_trace_frame[0][i];
         ood.frame[1][i] <== ood_trace_frame[1][i];
+    }
+    for (var i = 0; i < num_transition_constraints; i++) {
+        ood.ood_frame_constraint_evaluation[i] <== ood_frame_constraint_evaluation[i];
+    }
+    for (var i = 0; i < ce_blowup_factor; i++) {
+        ood.channel_ood_evaluations[i] <== ood_constraint_evaluations[i];
     }
 
 
@@ -231,11 +241,11 @@ template Verify(
         }
     }
 
-    constraintCommitmentVerifier = MerkleOpeningsVerify(num_queries, tree_depth, trace_width);
+    constraintCommitmentVerifier = MerkleOpeningsVerify(num_queries, tree_depth, ce_blowup_factor);
     constraintCommitmentVerifier.root <== constraint_commitment;
     for (var i = 0; i < num_queries; i++) {
         constraintCommitmentVerifier.indexes[i] <== pub_coin.query_positions[i];
-        for (var j = 0; j < trace_width; j++) {
+        for (var j = 0; j < ce_blowup_factor; j++) {
             constraintCommitmentVerifier.leaves[i][j] <== constraint_evaluations[i][j];
         }
         for (var j = 0; j < tree_depth; j++) {
@@ -265,8 +275,8 @@ template Verify(
     }
 
     for (var i = 0; i < num_queries; i++) {
+        // DEEP trace composition
         for (var j = 0; j < trace_width; j++) {
-            // DEEP trace composition
             trace_div[i][j][0] <-- (trace_evaluations[i][j] - ood_trace_frame[0][j]) / (multi_sel.out[i] - pub_coin.z);
             trace_div[i][j][0] * (multi_sel.out[i] - pub_coin.z) === trace_evaluations[i][j] - ood_trace_frame[0][j];
 
@@ -276,25 +286,29 @@ template Verify(
 
             trace_deep_composition[i][j][0] <== pub_coin.deep_trace_coefficients[j][0] * trace_div[i][j][0];
 
-            // DEEP constraint composition
             if (j == 0) {
-                trace_deep_composition[i][j][1] <== trace_deep_composition[i][j][0]+ pub_coin.deep_trace_coefficients[j][1] * trace_div[i][j][1];
+                trace_deep_composition[i][j][1] <== trace_deep_composition[i][j][0] + pub_coin.deep_trace_coefficients[j][1] * trace_div[i][j][1];
+            } else {
+                trace_deep_composition[i][j][1] <== trace_deep_composition[i][j-1][1] + trace_deep_composition[i][j][0]+ pub_coin.deep_trace_coefficients[j][1] * trace_div[i][j][1];
+            }
+        }
 
+        // DEEP constraint composition
+        for (var j = 0; j < ce_blowup_factor; j++) {
+            if (j == 0) {
                 constraint_div[i][j] <-- (constraint_evaluations[i][j] - ood_constraint_evaluations[j]) / (multi_sel.out[i] - z_m.out);
                 constraint_div[i][j]  * (multi_sel.out[i] - z_m.out) ===  constraint_evaluations[i][j] - ood_constraint_evaluations[j];
                 constraint_evalxcoeff[i][j] <== constraint_div[i][j] * pub_coin.deep_constraint_coefficients[j];
             } else {
-                trace_deep_composition[i][j][1] <== trace_deep_composition[i][j-1][1] + trace_deep_composition[i][j][0]+ pub_coin.deep_trace_coefficients[j][1] * trace_div[i][j][1];
-
                 constraint_div[i][j] <-- (constraint_evaluations[i][j] - ood_constraint_evaluations[j]) / (multi_sel.out[i] - z_m.out);
                 (constraint_div[i][j])  * (multi_sel.out[i] - z_m.out) ===  constraint_evaluations[i][j] - ood_constraint_evaluations[j];
                 constraint_evalxcoeff[i][j] <== constraint_evalxcoeff[i][j-1] + constraint_div[i][j] * pub_coin.deep_constraint_coefficients[j];
             }
         }
 
-        deep_composition[i] <== trace_deep_composition[i][trace_width -1][1] + constraint_evalxcoeff[i][trace_width -1];
-
         // final composition
+        deep_composition[i] <== trace_deep_composition[i][trace_width - 1][1] + constraint_evalxcoeff[i][ce_blowup_factor - 1];
+
         deep_deg_adjustment[i] <== pub_coin.degree_adjustment_coefficients[0] + multi_sel.out[i] * pub_coin.degree_adjustment_coefficients[1];
         deep_evaluations[i] <== deep_composition[i] * deep_deg_adjustment[i];
     }

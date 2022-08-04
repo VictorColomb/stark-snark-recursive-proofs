@@ -1,95 +1,66 @@
 pragma circom 2.0.0;
 
-include "../utils.circom";
+include "../utils/comparators.circom";
 
-/**
- * Define the degree for the transitions constraints.
- *
- * INPUTS:
- * - frame: Out Of Domain frame on which we will check the
- * the consistency with the channel.
- *
- * OUTPUTS:
- * - transition_degree : degree of the transition, will be used for degree
- *   adjustment. Should be set to the number of trace columns multiplied in
- *   during the transition.
- */
-template AIRTransitions(trace_width) {
-    signal output transition_degree[trace_width];
 
-    // transition 0
+template AIRTransitions(num_transition_constraints) {
+    signal output transition_degree[num_transition_constraints];
+
+    /* === EDIT FROM HERE === */
+
+    // Hardcode transition degrees, as you did in your implementation
+    // of WinterCircomProofOptions.
     transition_degree[0] <== 1;
-
-    // transition 1
     transition_degree[1] <== 1;
+
+    /* ====== TO HERE ====== */
 }
 
-/**
- * Define the assertions that will tie your public inputs to the calculation.
- * These assertions will then be transformed into boundray constraints.
- * For now only single assertions are supported :
- * --> Assigning a value to a fixed step for a fixed trace column.
- *
- * INPUTS:
- * - public_inputs: inputs used for the calculation
- * - frame: Out Of Domain evaluation frame
- *
- * OUTPUTS:
- * - out: evaluation of the boundary constraints against each trace column
- * - divisor_degree: degree of the polynomial used as divisor, need for degree
- *   adjustment
- *
- * TODO:
- * - Add support for cyclic and sequence constraints.
- * - for now divisor_degree is always 1 as we only use signel constraints. See
- * https://docs.rs/winter-air/0.4.0/winter_air/struct.ConstraintDivisor.html for
- * for other types of divisors.
- */
-template AIRAssertions(
-    num_assertions,
-    num_public_inputs,
-    trace_length,
-    trace_width
-) {
-    signal input frame[2][trace_width];
-    signal input g_trace;
+
+template AIRAssertions(addicity, num_assertions, num_public_inputs, trace_length, trace_width) {
+    signal input addicity_root;
     signal input public_inputs[num_public_inputs];
-    signal input z;
+    signal input g_trace;
 
-    signal output out[num_assertions];
-    signal output divisor_degree[num_assertions];
+    signal output evaluations[num_assertions];
+    signal output number_of_steps[num_assertions];
+    signal output registers[num_assertions];
+    signal output step_offsets[num_assertions];
+    signal output strides[num_assertions];
 
-    signal numerator[num_assertions];
-    signal value[num_assertions];
-    signal output step[num_assertions];
-    signal register[num_assertions];
+    component assertions[num_assertions];
 
-    /* HERE YOUR ASSERTIONS HERE */
+    /* === EDIT FROM HERE === */
 
-    value[0] <== public_inputs[0];
-    step[0] <== 0;
-    register[0] <== 0;
+    // Hardcode the number of assertions (this is a precaution).
 
-    value[1] <== public_inputs[0];
-    step[1] <== 0;
-    register[1] <== 1;
+    assert(num_assertions == 3);
 
-    value[2] <== public_inputs[1];
-    step[2] <== trace_length - 1;
-    register[2] <== 1;
+    // Define your assertions here, using the SingleAssertion, PeriodicAssertion
+    // and SequenceAssertion templates.
 
-    /* ------------------------------------- */
+    assertions[0] = SingleAssertion();
+    assertions[0].column <== 0;
+    assertions[0].step <== 0;
+    assertions[0].value <== public_inputs[0];
 
-    // boundary constraints evaluation
-    component sel[num_assertions];
+    assertions[1] = SingleAssertion();
+    assertions[1].column <== 1;
+    assertions[1].step <== 0;
+    assertions[1].value <== public_inputs[0];
+
+    assertions[2] = SingleAssertion();
+    assertions[2].column <== 1;
+    assertions[2].step <== trace_length - 1;
+    assertions[2].value <== public_inputs[1];
+
+    /* ====== TO HERE ====== */
+
     for (var i = 0; i < num_assertions; i++) {
-        sel[i] = Selector(trace_width);
-        for (var j = 0; j < trace_width; j++) {
-            sel[i].in[j] <== frame[0][j];
-        }
-        sel[i].index <== register[i];
-
-        out[i] <== sel[i].out - value[i];
-        divisor_degree[i] <== 1;
+        evaluations[i] <== assertions[i].evaluation;
+        number_of_steps[i] <== assertions[i].number_of_steps;
+        registers[i] <== assertions[i].register;
+        step_offsets[i] <== assertions[i].step_offset;
+        strides[i] <== assertions[i].stride_out;
     }
 }

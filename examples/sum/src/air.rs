@@ -90,7 +90,7 @@ impl Air for WorkAir {
 impl Default for WorkAir {
     fn default() -> Self {
         WorkAir::new(
-            TraceInfo::new(0, 0),
+            TraceInfo::new(2, 8),
             PublicInputs::default(),
             ProofOptions::new(
                 32,

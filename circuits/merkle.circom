@@ -1,7 +1,8 @@
 pragma circom 2.0.0;
 
 include "poseidon/poseidon.circom";
-include "utils.circom";
+include "utils/bits.circom";
+include "utils/comparators.circom";
 
 
 /**

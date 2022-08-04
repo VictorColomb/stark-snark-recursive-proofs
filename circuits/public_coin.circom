@@ -1,7 +1,8 @@
 pragma circom 2.0.0;
 
 include "poseidon/poseidon.circom";
-include "utils.circom";
+include "utils/bits.circom";
+include "utils/duplicates.circom";
 
 
 /**
@@ -53,7 +54,7 @@ template PublicCoin(
 
     signal input constraint_commitment;
     signal input fri_commitments[num_fri_layers + 1];
-    signal input ood_constraint_evaluations[trace_width];
+    signal input ood_constraint_evaluations[ce_blowup_factor];
     signal input ood_trace_frame[2][trace_width];
     signal input pow_nonce;
     signal input pub_coin_seed[num_pub_coin_seed];
@@ -61,7 +62,7 @@ template PublicCoin(
 
     signal output boundary_coeffs[num_assertions][2];
     signal output deep_trace_coefficients[trace_width][3];
-    signal output deep_constraint_coefficients[trace_width];
+    signal output deep_constraint_coefficients[ce_blowup_factor];
     signal output degree_adjustment_coefficients[2];
     signal output layer_alphas[num_fri_layers + 1];
     signal output query_positions[num_queries];
@@ -152,7 +153,7 @@ template PublicCoin(
     k += 1;
     reseed[k] = Reseed(ce_blowup_factor);
     reseed[k].prev_seed <== reseed[k-1].out;
-    for (var i = 0; i < trace_width; i++) {
+    for (var i = 0; i < ce_blowup_factor; i++) {
         reseed[k].in[i] <== ood_constraint_evaluations[i];
     }
 
@@ -165,7 +166,7 @@ template PublicCoin(
         deep_trace_coefficients[i][j] <== deep_coin[3 * i + j].out;
         }
     }
-    for (var i = 0; i < trace_width; i++){
+    for (var i = 0; i < ce_blowup_factor; i++){
         deep_coin[i + 3 * trace_width] = Poseidon(2);
         deep_coin[i + 3 * trace_width].in[0] <== reseed[k].out;
         deep_coin[i + 3 * trace_width].in[1] <== i + 3 * trace_width + 1;

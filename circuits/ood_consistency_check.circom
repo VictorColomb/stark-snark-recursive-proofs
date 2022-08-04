@@ -1,5 +1,8 @@
 pragma circom 2.0.0;
 
+include "utils/assertions.circom";
+include "utils/powers.circom";
+
 
 /**
  * Checks that the evaluations of composition polynomials sent by the prover
@@ -17,50 +20,49 @@ pragma circom 2.0.0;
  * - public_inputs: inputs used for the calculation
  * - transition_coeffs: Fiat-Shamir coefficients for the transition constraints.
  * - z: Out Of Domain point of evaluation, generated in the public coin.
- *
- * TODO:
- * - add support for composition with different degrees
- * - add support for periodic values
- * - group transitions by degree to reduce the number of degree adjustment
  */
 template OodConsistencyCheck(
+    addicity,
     ce_blowup_factor,
     num_assertions,
     num_public_inputs,
+    num_transition_constraints,
     trace_length,
     trace_width
 ) {
+    signal input addicity_root;
     signal input boundary_coeffs[num_assertions][2];
-    signal input channel_ood_evaluations[trace_width];
+    signal input channel_ood_evaluations[ce_blowup_factor];
     signal input frame[2][trace_width];
-    signal input ood_frame_constraint_evaluation[trace_width];
+    signal input ood_frame_constraint_evaluation[num_transition_constraints];
     signal input g_trace;
     signal input public_inputs[num_public_inputs];
-    signal input transition_coeffs[trace_width][2];
+    signal input transition_coeffs[num_transition_constraints][2];
     signal input z;
 
-    signal boundary_temp[num_assertions];
-    signal boundary_temp_2[num_assertions];
-    signal channel_ood_pow[trace_width];
-    signal evaluation_result[trace_width + num_assertions];
+    signal assertions_temp[num_assertions][2];
+    signal channel_ood_pow[ce_blowup_factor];
+    signal evaluation_result[num_transition_constraints + num_assertions];
     signal transition_divisor;
     signal transition_result;
-    signal transition_temp[trace_width];
+    signal transition_temp[num_transition_constraints];
 
     component AIR;
-    component boundary_deg_adjustment[num_assertions];
-    component evaluate_boundary_constraints;
-    component gpstep[num_assertions];
+    component assertions;
+    component assertions_frame;
+    component assertions_user;
+    component divisor_term[num_assertions][2];
     component gp_trace_len;
-    component transition_deg_adjustment[trace_width];
+    component transition_deg_adjustment[num_transition_constraints];
     component xpn;
+    component zp[num_assertions];
 
 
 
     // BUILDING TRANSITION DIVISOR
-    // for transition constraints, it is always the same : div(x) = (x**n)/(product i : 1 --> k : (x - g ** (n - i)))
+    // for transition constraints, it is always the same : div(x) = (x**n) / (product i : 1 --> k : (x - g ** (n - i)))
     // The above divisor specifies that transition constraints must hold on all steps of the execution trace except for the last k steps.
-    // The default value for k is 1, n represent the trace length
+    // The default value for k is 1. n represents the trace length
 
     gp_trace_len = Pow(trace_length - 1);
     gp_trace_len.in <== g_trace;
@@ -70,11 +72,12 @@ template OodConsistencyCheck(
     transition_divisor <-- (xpn.out - 1) / (z - gp_trace_len.out);
     transition_divisor * (z - gp_trace_len.out) === xpn.out - 1;
 
-    AIR = AIRTransitions(trace_width);
-    for (var i = 0; i < trace_width; i++) {
-        transition_deg_adjustment[i] = Pow_signal(numbits(trace_length * ce_blowup_factor - 1));
+    var numbits_transition_deg = numbits((ce_blowup_factor + 1) * trace_length);
+    AIR = AIRTransitions(num_transition_constraints);
+    for (var i = 0; i < num_transition_constraints; i++) {
+        transition_deg_adjustment[i] = Pow_signal(numbits_transition_deg);
         transition_deg_adjustment[i].in <== z;
-        transition_deg_adjustment[i].exp <== trace_length * ce_blowup_factor - AIR.transition_degree[i];
+        transition_deg_adjustment[i].exp <== (ce_blowup_factor + 1) * trace_length - 2 - AIR.transition_degree[i] * (trace_length - 1);
         transition_temp[i] <== transition_coeffs[i][0] + transition_coeffs[i][1] * transition_deg_adjustment[i].out;
 
         if (i == 0) {
@@ -82,57 +85,63 @@ template OodConsistencyCheck(
         } else {
             evaluation_result[i] <== evaluation_result[i-1] +  transition_temp[i] * ood_frame_constraint_evaluation[i];
         }
-
     }
 
-    transition_result <-- evaluation_result[trace_width - 1] / transition_divisor;
-    transition_result * transition_divisor ===  evaluation_result[trace_width - 1];
-
+    transition_result <-- evaluation_result[num_transition_constraints - 1] / transition_divisor;
+    transition_result * transition_divisor ===  evaluation_result[num_transition_constraints - 1];
 
     // BOUNDARY CONSTRAINTS EVALUATIONS
 
-    evaluate_boundary_constraints = AIRAssertions(
-        num_assertions,
-        num_public_inputs,
-        trace_length,
-        trace_width
-    );
-
-    evaluate_boundary_constraints.g_trace <== g_trace;
-    evaluate_boundary_constraints.z <== z;
-
+    // retrieve user-defined assertions
+    assertions_user = AIRAssertions(addicity, num_assertions, num_public_inputs, trace_length, trace_width);
+    assertions_user.addicity_root <== addicity_root;
+    assertions_user.g_trace <== g_trace;
     for (var i = 0; i < num_public_inputs; i++) {
-        evaluate_boundary_constraints.public_inputs[i] <== public_inputs[i];
-    }
-    for (var i = 0; i < 2; i++){
-        for (var j = 0; j < trace_width; j++) {
-            evaluate_boundary_constraints.frame[i][j] <== frame[i][j];
-        }
+        assertions_user.public_inputs[i] <== public_inputs[i];
     }
 
-
+    // sort assertions by stride, step offset and register (in that order)
+    assertions = SortAssertions(num_assertions, trace_length, trace_width);
     for (var i = 0; i < num_assertions; i++) {
-        boundary_deg_adjustment[i] = Pow_signal(255);
-        boundary_deg_adjustment[i].in <== z;
-        boundary_deg_adjustment[i].exp <== trace_length * ce_blowup_factor -1 + evaluate_boundary_constraints.divisor_degree[i] - (trace_length - 1);
-        boundary_temp[i] <==  boundary_coeffs[i][0] + boundary_coeffs[i][1] * boundary_deg_adjustment[i].out;
+        assertions.evaluations_in[i] <== assertions_user.evaluations[i];
+        assertions.number_of_steps_in[i] <== assertions_user.number_of_steps[i];
+        assertions.registers_in[i] <== assertions_user.registers[i];
+        assertions.step_offsets_in[i] <== assertions_user.step_offsets[i];
+        assertions.strides_in[i] <== assertions_user.strides[i];
+    }
 
-        // divisor for boundary constraints
-        // for single constraints the divisor is always x - g**step
-        gpstep[i] = Pow_signal(numbits(trace_length));
-        gpstep[i].in <== g_trace;
-        gpstep[i].exp <== evaluate_boundary_constraints.step[i];
+    assertions_frame = MultiSelector(trace_width, num_assertions);
+    for (var i = 0; i < trace_width; i++) {
+        assertions_frame.in[i] <== frame[0][i];
+    }
+    for (var i = 0; i < num_assertions; i++) {
+        assertions_frame.indexes[i] <== assertions.registers[i];
+    }
+
+    var numbits_trace_length = numbits(trace_length);
+    var numbits_ce_domain = numbits(ce_blowup_factor * trace_length);
+    for (var i = 0; i < num_assertions; i++) {
+        zp[i] = Pow_signal(numbits_ce_domain);
+        zp[i].in <== z;
+        zp[i].exp <== (ce_blowup_factor - 1) * trace_length + assertions.number_of_steps[i];
+
+        divisor_term[i][0] = Pow_signal(trace_length);
+        divisor_term[i][0].in <== z;
+        divisor_term[i][0].exp <== assertions.number_of_steps[i];
+        divisor_term[i][1] = Pow_signal(trace_length + 1);
+        divisor_term[i][1].in <== g_trace;
+        divisor_term[i][1].exp <== assertions.step_offsets[i] * assertions.number_of_steps[i];
+
+        assertions_temp[i][0] <== boundary_coeffs[i][0] + boundary_coeffs[i][1] * zp[i].out;
+        assertions_temp[i][1] <== (assertions_frame.out[i] - assertions.evaluations[i]) * assertions_temp[i][0];
 
         if (i == 0) {
-            boundary_temp_2[i] <== boundary_temp[i] * evaluate_boundary_constraints.out[i];
-            evaluation_result[i + trace_width] <-- transition_result + boundary_temp_2[i] / (z - gpstep[i].out);
-            (evaluation_result[i + trace_width] - transition_result)* (z - gpstep[i].out) === boundary_temp_2[i];
+            evaluation_result[num_transition_constraints] <-- transition_result + assertions_temp[i][1] / (divisor_term[i][0].out - divisor_term[i][1].out);
+            (evaluation_result[num_transition_constraints] - transition_result) * (divisor_term[i][0].out - divisor_term[i][1].out) === assertions_temp[i][1];
         } else {
-            boundary_temp_2[i] <== boundary_temp[i] * evaluate_boundary_constraints.out[i];
-            evaluation_result[i + trace_width] <-- evaluation_result[i + trace_width -1] +  boundary_temp_2[i] / (z - gpstep[i].out);
-            (evaluation_result[i + trace_width] - evaluation_result[i + trace_width -1])* (z - gpstep[i].out) === boundary_temp_2[i];
+            evaluation_result[num_transition_constraints + i] <-- evaluation_result[num_transition_constraints + i - 1] + assertions_temp[i][1] / (divisor_term[i][0].out - divisor_term[i][1].out);
+            (evaluation_result[num_transition_constraints + i] - evaluation_result[num_transition_constraints + i - 1]) * (divisor_term[i][0].out - divisor_term[i][1].out) === assertions_temp[i][1];
         }
-
     }
 
 
@@ -142,10 +151,10 @@ template OodConsistencyCheck(
 
     channel_ood_pow[0] <== 1;
     var channel_result = channel_ood_evaluations[0];
-    for (var i = 1; i < trace_width; i++) {
+    for (var i = 1; i < ce_blowup_factor; i++) {
         channel_ood_pow[i] <== z * channel_ood_pow[i-1];
         channel_result += channel_ood_evaluations[i] * channel_ood_pow[i];
     }
 
-    channel_result === evaluation_result[trace_width + num_assertions - 1];
+    channel_result === evaluation_result[num_transition_constraints + num_assertions - 1];
 }

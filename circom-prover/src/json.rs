@@ -3,7 +3,7 @@ use serde_json::{json, Value};
 use winterfell::{
     crypto::{Digest, ElementHasher, RandomCoin},
     math::{fields::f256::BaseElement, log2, FieldElement, StarkField},
-    Serializable, StarkProof, Air
+    Air, Serializable, StarkProof,
 };
 
 /// Parse a [StarkProof] into a Circom-usable JSON object.
@@ -34,6 +34,7 @@ use winterfell::{
 ///     "fri_layer_queries": [[_; num_queries * folding_factor]; num_fri_layers],
 ///     "fri_remainder": [_; lde_domain_size / (folding_factor ** num_fri_layers)],
 ///     "ood_constraint_evaluations": [_; ce_blowup_factor],
+///     "ood_frame_constraint_evaluation": [_; num_transition_constraints],
 ///     "ood_trace_frame": [[_; trace_width]; 2],
 ///     "pow_nonce": _,
 ///     "pub_coin_seed": [_; num_pub_coin_seed],
@@ -44,7 +45,7 @@ use winterfell::{
 /// }
 /// ```
 ///
-/// TODO: Return errors instead of panicking (`.map_err()` and `?` instead of `.unwrap()`)
+// TODO: Return errors instead of panicking (`.map_err()` and `?` instead of `.unwrap()`)
 pub fn proof_to_json<AIR, H>(
     proof: StarkProof,
     air: &AIR,
